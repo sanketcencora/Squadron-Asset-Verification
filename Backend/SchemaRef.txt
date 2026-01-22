@@ -1,0 +1,126 @@
+User: 
+
+- EmpID
+- EmpName
+- Emp EmailID
+- Assigned Asset 
+    - Asset Tag
+    - Asset Name
+    - Asset Image(upload)
+- Assigned Peripherals
+    - Peripheral Name 
+    - Count
+    - Check Box
+
+- Submit
+
+````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+
+Asset Manager: 
+
+- Login (EmpID and Passward)
+
+- Datas: 
+   - Service Now (Assigned)
+   - Instock (Finance Team)
+   - Peripherals
+
+- DashBoard: 
+	- KPI's : 
+	 - Total Inventory (Finance)
+ 	 - Assined (Asset Manager)
+ 	 - Instock (Total Inventory - Assigned)
+
+	- Instock Assets(Finance)
+ 	 - Filter ( Type of Asset)
+ 	 - Service Tag
+ 	 - Asset Type
+ 	 - Model
+ 	 - Cost 
+ 	 - Purchase Date
+ 	 - Status ( Waiting for Assignment)
+  	 - Export
+	
+	- Assigned Asset
+ 	 - Filter ( Type of Asset)
+ 	 - Service Tag
+ 	 - Asset Type
+ 	 - Model
+ 	 - Assigned To
+ 	 - Assigned Date
+ 	 - Verification Status
+ 	 - Last Verified 
+ 	 - Export
+
+	- Pheripheral Asset
+ 	 - Filter ( Type of Asset)
+ 	 - Service Tag
+ 	 - Asset Type
+ 	 - Model
+ 	 - Assigned To
+ 	 - Assigned Date
+ 	 - Verification Status
+  	 - Export
+
+- Verification Review: 
+  - KPI's: 
+  	- Total Submission 
+  	- Verified 
+  	- Pending Review 
+  - Verification Records: 
+	- Filters 
+	- Search by EMP ID/ EMP Name
+
+
+`````````````````````````````````````````````````````````````````````````````````````````````````````````````````
+
+Finance Team: 
+
+- Dashboard: 
+  - KPI's: 
+	- Total Assets 
+	- Verification Completed 
+	- Pending Verification 
+	- Overdue Exceptions
+
+  - Create Campaign: 
+    - Campaign Setup
+       - Campaign Name
+   	 - Description
+   	 - Start Date 
+   	 - End Date 
+    - Review and Launch
+	 - Employees Cnt 
+	 - Assets 
+	 - Peripherals 
+ 	 - Deadline
+     	
+
+  - Active Campaigns:	
+    - Campaign Name
+    - Description
+    - Start Date 
+    - End Date 
+    - Overall Progress 
+	- Employees
+	- Verified 
+	- Pending 
+	- Overdue
+
+
+- Campaigns: 
+	- Active Campaigns
+	- Create Campaigns
+
+- Reports: 
+	- Campaign wise download 
+
+-  Verfication Review
+	- Filters ( Team Name, Asset Type, Status) 
+	- Team 
+	- Total Assets 
+	- Verified 
+	- Pending 
+	- Overdue 
+	- Progress (%)
