@@ -197,23 +197,22 @@ export default function Login() {
                   {roles.map((role) => {
                     const Icon = role.icon;
                     return (
-                      <button
+                      <div
                         key={role.id}
                         onClick={() => handleLogin(role.id)}
-                        disabled={isLoading}
-                        className="flex items-center gap-4 p-4 rounded-xl border hover:border-primary/50 hover:bg-accent/5 transition-all duration-200 text-left group w-full"
+                        className="flex items-center gap-4 p-4 rounded-xl border hover:border-primary/50 hover:bg-accent/5 transition-all duration-200 text-left group w-full cursor-pointer"
                       >
                         <div className={`p-3 rounded-lg ${role.bg} ${role.color} group-hover:scale-110 transition-transform duration-200`}>
                           <Icon className="w-6 h-6" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h3 className="font-semibold text-foreground">{role.title}</h3>
                           <p className="text-sm text-muted-foreground">{role.description}</p>
                         </div>
                         <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button size="sm" variant="ghost">Select &rarr;</Button>
+                          <span className="text-sm font-medium text-primary">Select &rarr;</span>
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                   

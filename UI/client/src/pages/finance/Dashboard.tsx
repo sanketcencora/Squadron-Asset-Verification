@@ -29,15 +29,15 @@ import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 
 export default function FinanceDashboard() {
-  const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
-  const { data: activeCampaign, isLoading: campaignLoading, error: campaignError } = useActiveCampaign();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: activeCampaign, isLoading: campaignLoading } = useActiveCampaign();
 
   // Show loading state
   if (statsLoading || campaignLoading) {
     return (
-      <div className="flex min-h-screen bg-gray-50/50">
+      <div className="flex h-screen bg-gray-50/50">
         <Sidebar />
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto p-8">
           <div className="max-w-7xl mx-auto space-y-8">
             <div className="flex items-center justify-between">
               <div>
@@ -49,28 +49,6 @@ export default function FinanceDashboard() {
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="h-32 bg-gray-100 rounded-lg animate-pulse" />
               ))}
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (statsError || campaignError) {
-    return (
-      <div className="flex min-h-screen bg-gray-50/50">
-        <Sidebar />
-        <main className="flex-1 p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto space-y-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900">Financial Overview</h1>
-                <p className="text-muted-foreground mt-1">Track asset value, verification progress, and compliance.</p>
-              </div>
-            </div>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-800">Error loading dashboard data. Please refresh the page.</p>
             </div>
           </div>
         </main>
@@ -113,10 +91,10 @@ export default function FinanceDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50/50">
+    <div className="flex h-screen bg-gray-50/50">
       <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
-        <motion.div 
+      <main className="flex-1 overflow-y-auto p-8">
+        <motion.div
           variants={container}
           initial="hidden"
           animate="show"

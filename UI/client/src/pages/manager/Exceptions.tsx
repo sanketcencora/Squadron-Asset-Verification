@@ -1,5 +1,5 @@
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   FileWarning,
@@ -138,10 +138,10 @@ export default function ManagerExceptionsPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-gray-50/50">
+    <div className="flex h-screen bg-gray-50/50">
       <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
-        <motion.div 
+      <main className="flex-1 overflow-y-auto p-8">
+        <motion.div
           variants={container}
           initial="hidden"
           animate="show"
@@ -193,14 +193,14 @@ export default function ManagerExceptionsPage() {
             {filteredExceptions.map((exception) => (
               <motion.div key={exception.id} variants={item}>
                 <Card className="border-none shadow-lg shadow-black/5 hover:shadow-xl transition-shadow">
-                  <CardHeader>
+                  <div className="p-6 border-b">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-orange-50 rounded-lg">
                           <AlertTriangle className="w-5 h-5 text-orange-600" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg">{exception.assetName}</CardTitle>
+                          <h3 className="text-lg font-semibold">{exception.assetName}</h3>
                           <p className="text-sm text-muted-foreground">{exception.serialNumber}</p>
                         </div>
                       </div>
@@ -214,8 +214,8 @@ export default function ManagerExceptionsPage() {
                         </span>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                  </div>
+                  <div className="p-6 space-y-4">
                     <div>
                       <h4 className="font-medium text-sm mb-1">Exception Type</h4>
                       <p className="text-sm text-muted-foreground">{exception.exceptionType}</p>
@@ -269,7 +269,7 @@ export default function ManagerExceptionsPage() {
                         View Details
                       </Button>
                     </div>
-                  </CardContent>
+                  </div>
                 </Card>
               </motion.div>
             ))}

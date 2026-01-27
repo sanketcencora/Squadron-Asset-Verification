@@ -108,8 +108,8 @@ export function Sidebar({ className }: SidebarProps) {
   const links = getLinksForRole(user?.role || "");
 
   return (
-    <div className={cn("pb-12 min-h-screen bg-card border-r w-64 flex-shrink-0 fixed", className)}>
-      <div className="space-y-4 py-4 h-full flex flex-col">
+    <div className={cn("pb-12 h-screen bg-card border-r w-64 flex-shrink-0 sticky top-0", className)}>
+      <div className="space-y-4 py-4 h-full flex flex-col overflow-y-auto">
         <div className="px-6 py-2 flex items-center gap-2 mb-4">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
             <Box className="w-5 h-5" />

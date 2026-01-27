@@ -153,9 +153,9 @@ export default function FurnitureManagerDashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+    <div className="flex h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       <Sidebar />
-      <main className="ml-64 p-6">
+      <main className="flex-1 overflow-y-auto p-6">
         <motion.div
           variants={container}
           initial="hidden"

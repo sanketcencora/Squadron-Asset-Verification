@@ -65,10 +65,10 @@ export default function AdminManagerDashboard() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gray-50/50">
+    <div className="flex h-screen bg-gray-50/50">
       <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
-        <motion.div 
+      <main className="flex-1 overflow-y-auto p-8">
+        <motion.div
           variants={container}
           initial="hidden"
           animate="show"
