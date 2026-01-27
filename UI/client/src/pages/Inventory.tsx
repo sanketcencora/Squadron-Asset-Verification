@@ -190,22 +190,22 @@ export default function InventoryPage() {
 
           {/* Inventory Grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredItems.map((item) => (
-              <motion.div key={item.id} variants={item}>
+            {filteredItems.map((inventoryItem) => (
+              <motion.div key={inventoryItem.id} variants={item}>
                 <Card className="border-none shadow-lg shadow-black/5 hover:shadow-xl transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="p-2 bg-blue-50 rounded-lg">
-                          {getCategoryIcon(item.category)}
+                          {getCategoryIcon(inventoryItem.category)}
                         </div>
                         <div>
-                          <CardTitle className="text-lg">{item.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground">{item.category}</p>
+                          <CardTitle className="text-lg">{inventoryItem.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">{inventoryItem.category}</p>
                         </div>
                       </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(item.status)}`}>
-                        {item.status}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(inventoryItem.status)}`}>
+                        {inventoryItem.status}
                       </span>
                     </div>
                   </CardHeader>
@@ -213,19 +213,19 @@ export default function InventoryPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Serial Number</span>
-                        <span className="font-medium">{item.serialNumber}</span>
+                        <span className="font-medium">{inventoryItem.serialNumber}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Assigned to</span>
-                        <span className="font-medium">{item.user}</span>
+                        <span className="font-medium">{inventoryItem.user}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Location</span>
-                        <span className="font-medium">{item.location}</span>
+                        <span className="font-medium">{inventoryItem.location}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Value</span>
-                        <span className="font-medium">{item.value}</span>
+                        <span className="font-medium">{inventoryItem.value}</span>
                       </div>
                     </div>
                     <div className="flex gap-2 pt-2">

@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubmitVerification } from "@/hooks/use-assets";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -16,7 +17,9 @@ import {
   X,
   Camera,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Package
 } from "lucide-react";
 
 export default function EmployeeVerification() {
@@ -26,6 +29,13 @@ export default function EmployeeVerification() {
   const [step, setStep] = useState(1);
   const [items, setItems] = useState<any[]>([]);
   const [confirmed, setConfirmed] = useState(false);
+  const [showLaptopForm, setShowLaptopForm] = useState(false);
+  const [laptopInfo, setLaptopInfo] = useState({
+    serviceTag: '',
+    model: '',
+    condition: '',
+    notes: ''
+  });
 
   // Mock data since we're simulating the user's assigned assets
   const assignedAsset = {
@@ -46,6 +56,39 @@ export default function EmployeeVerification() {
       const filtered = prev.filter(i => i.peripheralName !== name);
       return [...filtered, { peripheralName: name, isPresent }];
     });
+  };
+
+  const handleLaptopInfoChange = (field: string, value: string) => {
+    setLaptopInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleAddLaptop = () => {
+    if (laptopInfo.serviceTag && laptopInfo.model) {
+      // Here you would typically send this data to the server
+      console.log('Adding laptop:', laptopInfo);
+      toast({
+        title: "Laptop Added Successfully",
+        description: `Dell laptop with Service Tag ${laptopInfo.serviceTag} has been added.`,
+      });
+      
+      // Reset form
+      setLaptopInfo({
+        serviceTag: '',
+        model: '',
+        condition: '',
+        notes: ''
+      });
+      setShowLaptopForm(false);
+    } else {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in Service Tag and Model fields.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -121,6 +164,100 @@ export default function EmployeeVerification() {
                       </Button>
                       <Button className="flex-1" onClick={() => setStep(2)}>
                         Confirm Device
+                      </Button>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        className="w-full gap-2"
+                        onClick={() => setShowLaptopForm(true)}
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Different Laptop
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Add Laptop Form */}
+            {showLaptopForm && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <div className="text-center space-y-2 mb-8">
+                  <h1 className="text-2xl font-bold">Add Dell Laptop Information</h1>
+                  <p className="text-muted-foreground">Enter the details of your assigned Dell laptop</p>
+                </div>
+
+                <Card className="border-none shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Laptop className="w-5 h-5" />
+                      Laptop Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="serviceTag">Service Tag *</Label>
+                        <Input
+                          id="serviceTag"
+                          placeholder="ST-LT-2024-001"
+                          value={laptopInfo.serviceTag}
+                          onChange={(e) => handleLaptopInfoChange('serviceTag', e.target.value)}
+                          className="font-mono"
+                        />
+                        <p className="text-xs text-muted-foreground">Format: ST-LT-YYYY-XXX</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="model">Model *</Label>
+                        <Input
+                          id="model"
+                          placeholder="Dell Latitude 5540"
+                          value={laptopInfo.model}
+                          onChange={(e) => handleLaptopInfoChange('model', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="condition">Condition</Label>
+                      <Input
+                        id="condition"
+                        placeholder="Good, Excellent, Needs Repair"
+                        value={laptopInfo.condition}
+                        onChange={(e) => handleLaptopInfoChange('condition', e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="notes">Additional Notes</Label>
+                      <Input
+                        id="notes"
+                        placeholder="Any issues or special requirements"
+                        value={laptopInfo.notes}
+                        onChange={(e) => handleLaptopInfoChange('notes', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowLaptopForm(false)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleAddLaptop}
+                        className="flex-1 gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Laptop
                       </Button>
                     </div>
                   </CardContent>

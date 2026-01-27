@@ -43,6 +43,20 @@ export async function registerRoutes(
       user = await storage.getUserByUsername('sarah.chen');
     } else if (role === 'manager') {
       user = await storage.getUserByUsername('michael.torres');
+    } else if (role === 'hr_manager') {
+      user = await storage.getUserByUsername('hr.manager');
+    } else if (role === 'admin_manager') {
+      user = await storage.getUserByUsername('admin.manager');
+    } else if (role === 'it_manager') {
+      user = await storage.getUserByUsername('it.manager');
+    } else if (role === 'network_engineer') {
+      user = await storage.getUserByUsername('network.engineer');
+    } else if (role === 'network_equipment_manager') {
+      user = await storage.getUserByUsername('network.equipment.manager');
+    } else if (role === 'audio_video_manager') {
+      user = await storage.getUserByUsername('audio.video.manager');
+    } else if (role === 'furniture_manager') {
+      user = await storage.getUserByUsername('furniture.manager');
     } else if (role === 'employee') {
       // For employee, default to Emily for demo, or match username if provided
       user = await storage.getUserByUsername('emily.johnson');
@@ -102,7 +116,7 @@ export async function registerRoutes(
 
   app.patch(api.assets.update.path, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       const input = api.assets.update.input.parse(req.body);
       const asset = await storage.updateAsset(id, input);
       res.json(asset);
@@ -115,7 +129,7 @@ export async function registerRoutes(
   });
 
   app.delete(api.assets.delete.path, async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
     await storage.deleteAsset(id);
     res.status(204).send();
   });
@@ -239,7 +253,32 @@ export async function registerRoutes(
 
 async function seedDatabase() {
   const existingUsers = await storage.getUserByUsername("sarah.chen");
-  if (existingUsers) return; // Already seeded
+  if (existingUsers) {
+    // Add Audio Video Manager if not exists
+    const audioVideoManager = await storage.getUserByUsername('audio.video.manager');
+    if (!audioVideoManager) {
+      await storage.createUser({
+        username: 'audio.video.manager',
+        password: 'avm123',
+        role: 'audio_video_manager',
+        name: 'Audio Video Manager',
+        department: 'Audio Video'
+      });
+    }
+
+    // Add Furniture Manager if not exists
+    const furnitureManager = await storage.getUserByUsername('furniture.manager');
+    if (!furnitureManager) {
+      await storage.createUser({
+        username: 'furniture.manager',
+        password: 'fm123',
+        role: 'furniture_manager',
+        name: 'Furniture Manager',
+        department: 'Facilities'
+      });
+    }
+    return; // Already seeded
+  }
 
   // 1. Create Users
   const finance = await storage.createUser({
@@ -285,6 +324,60 @@ async function seedDatabase() {
     name: "Lisa Anderson",
     department: "Marketing",
     avatar: "LA"
+  } as any);
+
+  const hrManager = await storage.createUser({
+    username: "hr.manager",
+    password: "password",
+    role: "hr_manager",
+    name: "Jennifer Davis",
+    department: "Human Resources",
+    avatar: "JD"
+  } as any);
+
+  const adminManager = await storage.createUser({
+    username: "admin.manager",
+    password: "password",
+    role: "admin_manager",
+    name: "Robert Miller",
+    department: "System Administration",
+    avatar: "RM"
+  } as any);
+
+  const itManager = await storage.createUser({
+    username: "it.manager",
+    password: "password",
+    role: "it_manager",
+    name: "David Chen",
+    department: "IT Infrastructure",
+    avatar: "DC"
+  } as any);
+
+  const networkEngineer = await storage.createUser({
+    username: "network.engineer",
+    password: "password",
+    role: "network_engineer",
+    name: "Alex Thompson",
+    department: "Network Engineering",
+    avatar: "AT"
+  } as any);
+
+  const networkEquipmentManager = await storage.createUser({
+    username: "network.equipment.manager",
+    password: "password",
+    role: "network_equipment_manager",
+    name: "Robert Wilson",
+    department: "Network Equipment Management",
+    avatar: "RW"
+  } as any);
+
+  const audioVideoManager = await storage.createUser({
+    username: "audio.video.manager",
+    password: "password",
+    role: "audio_video_manager",
+    name: "Michael Davis",
+    department: "Audio Video Management",
+    avatar: "MD"
   } as any);
 
   // 2. Create Assets

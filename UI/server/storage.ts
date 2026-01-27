@@ -1,5 +1,5 @@
 
-import { users, assets, campaigns, verifications, verificationItems, type User, type InsertUser, type Asset, type Campaign, type Verification, type VerificationItem } from "@shared/schema";
+import { users, assets, campaigns, verifications, verificationItems, type User, type InsertUser, type Asset, type InsertAsset, type Campaign, type Verification, type VerificationItem } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 

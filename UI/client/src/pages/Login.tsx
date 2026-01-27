@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, UserCircle, Briefcase, Wallet } from "lucide-react";
+import { ShieldCheck, UserCircle, Briefcase, Wallet, Users, Settings, FileText, Package, Video, Home } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Login() {
   const { login, isLoading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [showRegistration, setShowRegistration] = useState(false);
 
   const roles = [
     {
@@ -27,17 +28,63 @@ export default function Login() {
       bg: "bg-purple-50",
     },
     {
+      id: "network_equipment_manager",
+      title: "Network Equipment Manager",
+      description: "Network hardware & equipment management",
+      icon: Package,
+      color: "text-orange-500",
+      bg: "bg-orange-50",
+    },
+    {
+      id: "audio_video_manager",
+      title: "Audio Video Manager",
+      description: "Audio/video equipment & systems management",
+      icon: Video,
+      color: "text-purple-500",
+      bg: "bg-purple-50",
+    },
+    {
+      id: "furniture_manager",
+      title: "Furniture Manager",
+      description: "Furniture & office equipment management",
+      icon: Home,
+      color: "text-amber-500",
+      bg: "bg-amber-50",
+    },
+    {
       id: "employee",
       title: "Employee",
       description: "Verify your assigned assets",
       icon: UserCircle,
-      color: "text-green-500",
-      bg: "bg-green-50",
+      color: "text-gray-500",
+      bg: "bg-gray-50",
     },
   ];
 
   const handleLogin = (role: string) => {
-    login({ role: role as any });
+    // For ALL roles (including finance), show registration option first
+    if (role === 'manager' || role === 'hr_manager' || role === 'admin_manager' || role === 'it_manager' || role === 'finance' || role === 'network_equipment_manager' || role === 'audio_video_manager' || role === 'furniture_manager') {
+      setSelectedRole(role);
+      setShowRegistration(true);
+    } else {
+      // Only employees go directly to login
+      login({ role: role as any });
+    }
+  };
+
+  const handleDirectLogin = () => {
+    if (selectedRole) {
+      login({ role: selectedRole as any });
+    }
+  };
+
+  const handleRegister = () => {
+    window.location.href = '/register';
+  };
+
+  const backToRoles = () => {
+    setSelectedRole(null);
+    setShowRegistration(false);
   };
 
   return (
@@ -86,34 +133,103 @@ export default function Login() {
         >
           <Card className="border-none shadow-2xl shadow-primary/5">
             <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl">Select Your Role</CardTitle>
+              <CardTitle className="text-2xl">
+                {showRegistration ? `${selectedRole?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Access` : 'Select Your Role'}
+              </CardTitle>
               <CardDescription>
-                Choose a role to explore the platform demo
+                {showRegistration 
+                  ? `Choose your access method for ${selectedRole?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`
+                  : 'Choose a role to explore the platform demo'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
-              {roles.map((role) => {
-                const Icon = role.icon;
-                return (
-                  <button
-                    key={role.id}
-                    onClick={() => handleLogin(role.id)}
-                    disabled={isLoading}
-                    className="flex items-center gap-4 p-4 rounded-xl border hover:border-primary/50 hover:bg-accent/5 transition-all duration-200 text-left group w-full"
-                  >
-                    <div className={`p-3 rounded-lg ${role.bg} ${role.color} group-hover:scale-110 transition-transform duration-200`}>
-                      <Icon className="w-6 h-6" />
+              {showRegistration && selectedRole ? (
+                <div className="space-y-4">
+                  <div className="text-center p-6 bg-gray-50 rounded-lg">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      {(() => {
+                        const role = roles.find(r => r.id === selectedRole);
+                        const Icon = role?.icon || UserCircle;
+                        return <Icon className="w-8 h-8 text-primary" />;
+                      })()}
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{role.title}</h3>
-                      <p className="text-sm text-muted-foreground">{role.description}</p>
+                    <h3 className="text-lg font-semibold mb-2">
+                      {selectedRole.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {roles.find(r => r.id === selectedRole)?.description}
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-3">
+                    <Button 
+                      onClick={handleDirectLogin}
+                      size="lg"
+                      className="gap-2"
+                      disabled={isLoading}
+                    >
+                      <UserCircle className="w-4 h-4" />
+                      {isLoading ? 'Logging in...' : 'I Already Have an Account'}
+                    </Button>
+                    
+                    <Button 
+                      onClick={handleRegister}
+                      variant="outline"
+                      size="lg"
+                      className="gap-2"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      Register New Account
+                    </Button>
+                    
+                    <Button 
+                      onClick={backToRoles}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      ← Back to Role Selection
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {roles.map((role) => {
+                    const Icon = role.icon;
+                    return (
+                      <button
+                        key={role.id}
+                        onClick={() => handleLogin(role.id)}
+                        disabled={isLoading}
+                        className="flex items-center gap-4 p-4 rounded-xl border hover:border-primary/50 hover:bg-accent/5 transition-all duration-200 text-left group w-full"
+                      >
+                        <div className={`p-3 rounded-lg ${role.bg} ${role.color} group-hover:scale-110 transition-transform duration-200`}>
+                          <Icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">{role.title}</h3>
+                          <p className="text-sm text-muted-foreground">{role.description}</p>
+                        </div>
+                        <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="sm" variant="ghost">Select &rarr;</Button>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  
+                  <div className="pt-4 border-t">
+                    <div className="text-center text-sm text-muted-foreground">
+                      New to the system?{" "}
+                      <a 
+                        href="/register" 
+                        className="text-primary hover:underline font-medium"
+                      >
+                        Register here
+                      </a>
                     </div>
-                    <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button size="sm" variant="ghost">Login &rarr;</Button>
-                    </div>
-                  </button>
-                );
-              })}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>

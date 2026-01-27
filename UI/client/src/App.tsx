@@ -8,12 +8,19 @@ import NotFound from "@/pages/not-found";
 
 // Pages
 import Login from "@/pages/Login";
+import Registration from "@/pages/Registration";
 import FinanceDashboard from "@/pages/finance/Dashboard";
 import CampaignsPage from "@/pages/finance/Campaigns";
 import ReportsPage from "@/pages/finance/Reports";
 import ManagerDashboard from "@/pages/manager/Dashboard";
 import ManagerInventoryPage from "@/pages/manager/Inventory";
 import ManagerExceptionsPage from "@/pages/manager/Exceptions";
+import HRManagerDashboard from "@/pages/hr/Dashboard";
+import AdminManagerDashboard from "@/pages/admin/Dashboard";
+import ITManagerDashboard from "@/pages/it/Dashboard";
+import NetworkEquipmentManagerDashboard from "@/pages/network-equipment/Dashboard";
+import AudioVideoManagerDashboard from "@/pages/audio-video/Dashboard";
+import FurnitureManagerDashboard from "@/pages/furniture/Dashboard";
 import EmployeeVerification from "@/pages/employee/Verification";
 import VerificationReview from "@/pages/finance/VerificationReview";
 
@@ -25,17 +32,29 @@ function ProtectedRoute({
   allowedRoles: string[] 
 }) {
   const { user, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location] = useLocation();
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!user) {
-    setLocation("/");
+    // Redirect to registration page for manager routes
+    if (location.startsWith('/manager') || location.startsWith('/hr') || location.startsWith('/admin') || location.startsWith('/it')) {
+      window.location.href = '/register';
+      return null;
+    }
+    // For other routes, redirect to login
+    window.location.href = '/';
     return null;
   }
 
   if (!allowedRoles.includes(user.role)) {
-    setLocation("/"); // Or unauthorized page
+    window.location.href = '/';
     return null;
   }
 
@@ -46,6 +65,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
+      <Route path="/register" component={Registration} />
       
       {/* Finance Routes - UNCHANGED */}
       <Route path="/finance">
@@ -70,6 +90,36 @@ function Router() {
       </Route>
       <Route path="/manager/exceptions">
         <ProtectedRoute component={ManagerExceptionsPage} allowedRoles={['manager']} />
+      </Route>
+
+      {/* HR Manager Routes */}
+      <Route path="/hr">
+        <ProtectedRoute component={HRManagerDashboard} allowedRoles={['hr_manager']} />
+      </Route>
+
+      {/* Admin Manager Routes */}
+      <Route path="/admin">
+        <ProtectedRoute component={AdminManagerDashboard} allowedRoles={['admin_manager']} />
+      </Route>
+
+      {/* IT Manager Routes */}
+      <Route path="/it">
+        <ProtectedRoute component={ITManagerDashboard} allowedRoles={['it_manager']} />
+      </Route>
+
+      {/* Network Equipment Manager Routes */}
+      <Route path="/network-equipment">
+        <ProtectedRoute component={NetworkEquipmentManagerDashboard} allowedRoles={['network_equipment_manager']} />
+      </Route>
+
+      {/* Audio Video Manager Routes */}
+      <Route path="/audio-video">
+        <ProtectedRoute component={AudioVideoManagerDashboard} allowedRoles={['audio_video_manager']} />
+      </Route>
+
+      {/* Furniture Manager Routes */}
+      <Route path="/furniture">
+        <ProtectedRoute component={FurnitureManagerDashboard} allowedRoles={['furniture_manager']} />
       </Route>
 
       {/* Employee Routes */}

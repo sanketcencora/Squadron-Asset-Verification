@@ -50,6 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Redirect based on role
       if (user.role === "finance") setLocation("/finance");
       else if (user.role === "manager") setLocation("/manager");
+      else if (user.role === "hr_manager") setLocation("/hr");
+      else if (user.role === "admin_manager") setLocation("/admin");
+      else if (user.role === "it_manager") setLocation("/it");
+      else if (user.role === "network_equipment_manager") setLocation("/network-equipment");
+      else if (user.role === "audio_video_manager") setLocation("/audio-video");
+      else if (user.role === "furniture_manager") setLocation("/furniture");
+      else if (user.role === "employee") setLocation("/employee");
       else setLocation("/employee");
     },
     onError: () => {
