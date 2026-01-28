@@ -1,4 +1,3 @@
-
 // server/index.ts
 import "dotenv/config";
 import express, { type Request, type Response, type NextFunction } from "express";
@@ -64,11 +63,20 @@ app.use((req, res, next) => {
 // -------------------- UI_ONLY auth (no DB) --------------------
 // In-memory “users” to satisfy your frontend contract.
 // Add/adjust fields to match what your UI expects.
-const demoUsers = {
-  finance: { id: 1, role: "finance", username: "finance", name: "Finance User" },
-  manager: { id: 2, role: "manager", username: "manager", name: "Manager User" },
-  employee: { id: 3, role: "employee", username: "employee", name: "Employee User" },
-} as const;
+// Seed demo users (with a simple password for demo purposes)
+const demoUsersData = [
+  { id: 1, role: "finance", username: "sarah.chen", name: "Sarah Chen", password: 'password' },
+  { id: 2, role: "manager", username: "michael.torres", name: "Michael Torres", password: 'password' },
+  { id: 3, role: "employee", username: "emily.johnson", name: "Emily Johnson", password: 'password' },
+];
+
+// Map username -> user
+const users = new Map<string, any>();
+let nextUserId = 1000;
+for (const u of demoUsersData) {
+  users.set(u.username, { id: u.id, username: u.username, name: u.name, role: u.role, password: u.password });
+  nextUserId = Math.max(nextUserId, u.id + 1);
+}
 
 // simplistic session store: sessionId -> user
 const sessions = new Map<string, any>();
@@ -87,34 +95,6 @@ app.use((req, _res, next) => {
 });
 
 // Auth routes as per your api schema
-app.post("/api/auth/login", (req, res) => {
-  const { role, username } = req.body ?? {};
-
-  if (!role || !["finance", "manager", "employee"].includes(role)) {
-    return res.status(401).json({ message: "Invalid role", field: "role" });
-  }
-
-  // optional username support (your schema allows it)
-  const user = (demoUsers as any)[role];
-  if (!user) {
-    return res.status(401).json({ message: "User not found" });
-  }
-
-  // Create session + set cookie
-  const sid = newSessionId();
-  const userWithUsername = { ...user, username: username ?? user.username };
-
-  sessions.set(sid, userWithUsername);
-
-  res.cookie("sid", sid, {
-    httpOnly: true,
-    sameSite: "lax",
-    // secure: true, // enable when using https
-  });
-
-  return res.status(200).json(userWithUsername);
-});
-
 app.get("/api/auth/me", (req, res) => {
   if (!req.user) {
     return res.status(401).json({ message: "Not logged in" });
@@ -143,29 +123,102 @@ app.get("/api/health", (_req, res) => res.json({ ok: true, mode: "ui-only" }));
     await registerRoutes(httpServer, app, { skipDb: false });
   } else {
     console.log("UI_ONLY mode enabled — DB routes skipped; UI auth routes enabled.");
-  }
 
-  // Serve frontend (login page)
-  if (process.env.NODE_ENV === "production") {
-    const { serveStatic } = await import("./static");
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
+    // Lightweight UI-only auth route for local/demo mode
+    app.post("/api/auth/login", (req, res) => {
+      const { username, password, role } = req.body ?? {};
 
-  // Error handler last
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err?.status || err?.statusCode || 500;
-    const message = err?.message || "Internal Server Error";
-    console.error("Internal Server Error:", err);
-    if (res.headersSent) return next(err);
-    return res.status(status).json({ message });
-  });
+      // If username & password provided, authenticate against our in-memory users
+      if (username && password) {
+        const u = users.get(username);
+        if (!u || u.password !== password) {
+          return res.status(401).json({ message: 'Invalid credentials' });
+        }
 
-  const port = parseInt(process.env.PORT || "3000", 10);
-  httpServer.listen({ port, host: "localhost" }, () => {
-    log(`serving on port ${port} (UI_ONLY=${uiOnly})`);
-    log(`open: http://localhost:${port}/`, "info");
-  });
-})();
+        const sid = newSessionId();
+        const userSafe = { id: u.id, username: u.username, name: u.name, role: u.role };
+        sessions.set(sid, userSafe);
+        res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax' });
+        return res.status(200).json(userSafe);
+      }
+
+      // If no username (role-only), fall back to role lookup/synthesis for demo
+      if (role) {
+        // try to find a seeded user by role
+        for (const v of users.values()) {
+          if (v.role === role) {
+            const sid = newSessionId();
+            const userSafe = { id: v.id, username: v.username, name: v.name, role: v.role };
+            sessions.set(sid, userSafe);
+            res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax' });
+            return res.status(200).json(userSafe);
+          }
+        }
+
+        // synthesize a demo user
+        const usernameBase = role.replace(/[^a-z0-9]/gi, '.').toLowerCase();
+        const user = { id: Date.now() % 1000000, role, username: username ?? usernameBase, name: role.replace(/[_-]/g, ' ') };
+        const sid = newSessionId();
+        sessions.set(sid, user);
+        res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax' });
+        return res.status(200).json(user);
+      }
+
+      return res.status(400).json({ message: 'username/password required' });
+    });
+
+    // Registration endpoint — required fields: username, password, role, name, email, phone, department, employeeId
+    app.post('/api/auth/register', (req, res) => {
+      const body = req.body ?? {};
+      const required = ['username', 'password', 'role', 'name', 'email', 'phone', 'department', 'employeeId'];
+      for (const f of required) {
+        if (!body[f]) return res.status(400).json({ message: `Missing field: ${f}` });
+      }
+
+      const username = body.username;
+      if (users.has(username)) {
+        return res.status(409).json({ message: 'Username already exists' });
+      }
+
+      const newUser = {
+        id: nextUserId++,
+        username,
+        password: body.password,
+        role: body.role,
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        department: body.department,
+        employeeId: body.employeeId,
+      };
+
+      users.set(username, newUser);
+      console.log('[UI server] Registered new user:', newUser.username, newUser.role);
+      return res.status(201).json({ id: newUser.id, username: newUser.username, role: newUser.role, name: newUser.name, email: newUser.email });
+    });
+   }
+
+   // Serve frontend (login page)
+   if (process.env.NODE_ENV === "production") {
+     const { serveStatic } = await import("./static");
+     serveStatic(app);
+   } else {
+     const { setupVite } = await import("./vite");
+     await setupVite(httpServer, app);
+   }
+
+   // Error handler last
+   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+     const status = err?.status || err?.statusCode || 500;
+     const message = err?.message || "Internal Server Error";
+     console.error("Internal Server Error:", err);
+     if (res.headersSent) return next(err);
+     return res.status(status).json({ message });
+   });
+
+   const port = parseInt(process.env.PORT || "3000", 10);
+   httpServer.listen({ port, host: "localhost" }, () => {
+     log(`serving on port ${port} (UI_ONLY=${uiOnly})`);
+     log(`open: http://localhost:${port}/`, "info");
+   });
+ })();

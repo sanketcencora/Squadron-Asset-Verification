@@ -1,4 +1,3 @@
-
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -37,6 +36,7 @@ export async function registerRoutes(
   // === AUTH ROUTES ===
   app.post(api.auth.login.path, async (req, res) => {
     const { role, username } = req.body;
+    console.log('[routes] /api/auth/login attempt:', { role, username, body: req.body });
     // Simple demo login logic
     let user;
     if (role === 'finance') {

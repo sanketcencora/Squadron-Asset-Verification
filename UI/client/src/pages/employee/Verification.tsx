@@ -130,7 +130,7 @@ export default function EmployeeVerification() {
           <AnimatePresence mode="wait">
             
             {/* Step 1: Hardware */}
-            {step === 1 && (
+            {step === 1 && !showLaptopForm && (
               <motion.div
                 key="step1"
                 initial={{ opacity: 0, x: 20 }}
@@ -184,8 +184,10 @@ export default function EmployeeVerification() {
             {/* Add Laptop Form */}
             {showLaptopForm && (
               <motion.div
+                key="addLaptop"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
                 className="space-y-6"
               >
                 <div className="text-center space-y-2 mb-8">

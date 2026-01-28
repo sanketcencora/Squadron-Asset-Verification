@@ -18,11 +18,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  // Allow overriding API base URL via Vite env var VITE_API_BASE (e.g. http://localhost:8080)
+  // Default to localhost:8080 so dev requests go to the backend when env isn't set.
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:8080';
 
   const { data: user, isLoading } = useQuery({
     queryKey: [api.auth.me.path],
     queryFn: async () => {
-      const res = await fetch(api.auth.me.path);
+      const res = await fetch(API_BASE + api.auth.me.path, { credentials: 'include' });
       if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to fetch user");
       return await res.json();
@@ -32,13 +35,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
-      const res = await fetch(api.auth.login.path, {
+      const res = await fetch(API_BASE + api.auth.login.path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Login failed");
-      return await res.json();
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        const err: any = new Error(body?.message || 'Login failed');
+        err.status = res.status;
+        err.body = body;
+        throw err;
+      }
+      return body;
     },
     onSuccess: (user) => {
       queryClient.setQueryData([api.auth.me.path], user);
@@ -59,18 +69,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       else if (user.role === "employee") setLocation("/employee");
       else setLocation("/employee");
     },
-    onError: () => {
+    onError: async (err: any, variables: LoginRequest | undefined) => {
+      // Debug: log full error & variables to console for diagnostics
+      console.error('login onError:', { err, variables });
+
+      const attemptedRole = variables?.role ?? "unknown";
+      // Friendly role label
+      const roleLabelMap: Record<string, string> = {
+        finance: "Finance",
+        manager: "Asset Manager",
+        employee: "Employee",
+        hr_manager: "HR Manager",
+        admin_manager: "Admin",
+        it_manager: "IT Manager",
+        network_equipment_manager: "Network Equipment Manager",
+        audio_video_manager: "Audio / Video Manager",
+        furniture_manager: "Furniture Manager",
+      };
+      const label = roleLabelMap[attemptedRole] ?? attemptedRole;
+
+      // For these specific roles, show a concise friendly message
+      const rolesShowGeneric = new Set([
+        "manager",
+        "network_equipment_manager",
+        "audio_video_manager",
+        "furniture_manager",
+      ]);
+
+      let description = `${label}: ${err?.message ?? "Please try again."}`;
+
+      // If server returned 401, try to fetch health endpoint for extra diagnostics
+      if (err?.status === 401) {
+        try {
+          const h = await fetch(API_BASE + '/api/health', { credentials: 'include' });
+          const hb = await h.json().catch(() => null);
+          console.warn('Auth failure details:', { error: err, health: hb });
+          // Use a friendly message for manager-like roles
+          if (rolesShowGeneric.has(attemptedRole)) {
+            description = `${label}: Login failed — please try again.`;
+          } else {
+            description = `${label}: ${err?.message ?? 'Please try again.'} (${h.status}: ${hb?.ok ?? 'no health'})`;
+          }
+        } catch (fetchErr) {
+          console.warn('Auth failure details:', { error: err, healthFetchError: fetchErr });
+          description = `${label}: ${err?.message ?? 'Please try again.'}`;
+        }
+      }
+
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Login failed. Please try again.",
+        title: "Login failed",
+        description,
       });
     },
   });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await fetch(api.auth.logout.path, { method: "POST" });
+      await fetch(API_BASE + api.auth.logout.path, { method: "POST", credentials: 'include' });
     },
     onSuccess: () => {
       queryClient.setQueryData([api.auth.me.path], null);

@@ -22,6 +22,7 @@ export default function RegistrationPage() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:8080';
 
   const departments = [
     "Engineering",
@@ -36,7 +37,11 @@ export default function RegistrationPage() {
 
   const roles = [
     { value: "employee", label: "Employee" },
-    { value: "manager", label: "Asset Manager" }
+    { value: "manager", label: "Asset Manager" },
+    { value: "finance", label: "Finance" },
+    { value: "audio_video_manager", label: "Audio / Video Manager" },
+    { value: "network_equipment_manager", label: "Network Equipment Manager" },
+    { value: "furniture_manager", label: "Furniture Manager" }
   ];
 
   const handleInputChange = (field: string, value: string) => {
@@ -57,14 +62,54 @@ export default function RegistrationPage() {
       return;
     }
 
-    // Simulate registration process
-    setTimeout(() => {
-      console.log("Registration data:", formData);
-      alert("Registration successful! Please login with your credentials.");
+    const makeRequest = async (base: string) => {
+      const url = base + '/api/auth/register';
+      console.debug('[Registration] POST to', url);
+      return await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.email || formData.employeeId,
+          password: formData.password,
+          role: formData.role || 'employee',
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          phone: formData.phone,
+          department: formData.department,
+          employeeId: formData.employeeId,
+        }),
+      });
+    };
+
+    try {
+      // Try backend first
+      let res;
+      try {
+        res = await makeRequest(API_BASE);
+      } catch (err) {
+        console.warn('Primary backend unreachable, attempting same-origin fallback', err);
+        // Fallback to same-origin UI server
+        const origin = '';// relative URL
+        res = await makeRequest('');
+      }
+
+      const text = await res.text().catch(() => '');
+      let body = null;
+      try { body = JSON.parse(text); } catch(_) { body = text; }
+      if (res.status === 201) {
+        alert('Registration successful! Please login with your credentials.');
+        window.location.href = '/';
+        return;
+      }
+      console.error('Registration failed', { status: res.status, body });
+      alert(`Registration failed (${res.status}): ${body?.message ?? text}`);
+    } catch (err: any) {
+      console.error('Registration error', err);
+      const msg = err?.message || String(err);
+      alert(`Registration failed — network or server error:\n${msg}`);
+    } finally {
       setIsLoading(false);
-      // Redirect to login page
-      window.location.href = "/";
-    }, 2000);
+    }
   };
 
   return (

@@ -9,6 +9,8 @@ export default function Login() {
   const { login, isLoading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const roles = [
     {
@@ -62,20 +64,18 @@ export default function Login() {
   ];
 
   const handleLogin = (role: string) => {
-    // For ALL roles (including finance), show registration option first
-    if (role === 'manager' || role === 'hr_manager' || role === 'admin_manager' || role === 'it_manager' || role === 'finance' || role === 'network_equipment_manager' || role === 'audio_video_manager' || role === 'furniture_manager') {
-      setSelectedRole(role);
-      setShowRegistration(true);
-    } else {
-      // Only employees go directly to login
-      login({ role: role as any });
-    }
+    // Show sign-in/register panel with the selected role prefilled for registration
+    setSelectedRole(role);
+    setShowRegistration(true);
   };
 
   const handleDirectLogin = () => {
-    if (selectedRole) {
-      login({ role: selectedRole as any });
+    // Sign-in requires username & password
+    if (!username || !password) {
+      alert('Please enter username and password');
+      return;
     }
+    login({ username, password } as any);
   };
 
   const handleRegister = () => {
@@ -163,14 +163,20 @@ export default function Login() {
                   </div>
                   
                   <div className="grid grid-cols-1 gap-3">
-                    <Button 
-                      onClick={handleDirectLogin}
+                    <div className="space-y-2">
+                      <label className="text-sm">Username</label>
+                      <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-3 py-2 border rounded" />
+                      <label className="text-sm">Password</label>
+                      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border rounded" />
+                    </div>
+                    <Button
+                      onClick={() => handleDirectLogin()}
                       size="lg"
                       className="gap-2"
                       disabled={isLoading}
                     >
                       <UserCircle className="w-4 h-4" />
-                      {isLoading ? 'Logging in...' : 'I Already Have an Account'}
+                      {isLoading ? 'Signing in...' : 'Sign In'}
                     </Button>
                     
                     <Button 
