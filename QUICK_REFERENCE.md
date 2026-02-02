@@ -2,7 +2,7 @@
 
 ## What You See Now ✅
 
-### Dashboard Layout
+### Dashboard Layout below
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ SIDEBAR                         │ MAIN CONTENT AREA      │
