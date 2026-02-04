@@ -1,6 +1,7 @@
 import { UserRole } from '@/data/mockData';
-import { LayoutDashboard, Package, FileText, Settings, LogOut, Search, Bell } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, LogOut, Search, Bell } from 'lucide-react';
 import { ConnectionStatus } from './ConnectionStatus';
+import { Logo } from './Logo';
 
 interface NavigationProps {
   role: UserRole;
@@ -45,9 +46,7 @@ export function Navigation({ role, currentPage, onNavigate, onLogout, userName }
         <div className="flex items-center justify-between h-full px-6">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-white" />
-              </div>
+              <Logo className="h-7 w-auto" />
               <span className="font-semibold text-gray-900">Asset Verification System</span>
             </div>
             
@@ -57,7 +56,7 @@ export function Navigation({ role, currentPage, onNavigate, onLogout, userName }
               <input
                 type="text"
                 placeholder="Search by Employee ID or Service Tag..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#461e96] focus:border-transparent"
               />
             </div>
           </div>
@@ -78,7 +77,7 @@ export function Navigation({ role, currentPage, onNavigate, onLogout, userName }
                 <p className="text-sm font-medium text-gray-900">{userName}</p>
                 <p className="text-xs text-gray-500 capitalize">{role}</p>
               </div>
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-[#461e96] rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-white">
                   {userName.split(' ').map(n => n[0]).join('')}
                 </span>
@@ -100,7 +99,7 @@ export function Navigation({ role, currentPage, onNavigate, onLogout, userName }
                 onClick={() => onNavigate(item.id)}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
+                    ? 'bg-[#f2effa] text-[#461e96]'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >

@@ -1,5 +1,6 @@
 // API Configuration and Base Service
-const API_BASE_URL = 'http://localhost:8080/api';
+// Allow override via Vite env; default to backend dev port 8081
+export const API_BASE_URL = (import.meta as any)?.env?.VITE_API_BASE_URL || 'http://localhost:8081/api';
 
 // Generic fetch wrapper with error handling
 async function fetchApi<T>(
@@ -7,7 +8,7 @@ async function fetchApi<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const defaultOptions: RequestInit = {
     credentials: 'include',
     headers: {
@@ -16,19 +17,32 @@ async function fetchApi<T>(
     },
   };
 
-  const response = await fetch(url, { ...defaultOptions, ...options });
+  // Add a short timeout to avoid hanging UI when backend is down
+  const controller = new AbortController();
+  const timeoutMs = 3000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  try {
+    const response = await fetch(url, { ...defaultOptions, ...options, signal: controller.signal });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    }
+
+    if (response.status === 204) {
+      return null as T;
+    }
+
+    return response.json();
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Request timed out');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  // Handle 204 No Content
-  if (response.status === 204) {
-    return null as T;
-  }
-
-  return response.json();
 }
 
 // Type definitions matching backend

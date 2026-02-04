@@ -1,0 +1,24 @@
+:root {}
+
+/* Brand color overrides for legacy blue utility classes */
+.text-blue-600 { color: #461e96 !important; }
+.text-blue-700 { color: #3b197f !important; }
+.text-blue-800 { color: #2e136a !important; }
+.text-blue-900 { color: #1f0f4f !important; }
+
+.bg-blue-600 { background-color: #461e96 !important; }
+.bg-blue-700 { background-color: #3b197f !important; }
+.hover\:bg-blue-700:hover { background-color: #3b197f !important; }
+
+.bg-blue-50 { background-color: #f2effa !important; }
+.bg-blue-100 { background-color: #ede7fb !important; }
+
+.border-blue-200 { border-color: #e3dcf7 !important; }
+.border-blue-300 { border-color: #d6cdf5 !important; }
+.hover\:border-blue-300:hover { border-color: #d6cdf5 !important; }
+.border-blue-500 { border-color: #461e96 !important; }
+.hover\:border-blue-500:hover { border-color: #461e96 !important; }
+
+/* Focus ring override */
+.focus\:ring-blue-500:focus { --tw-ring-color: #461e96 !important; }
+.ring-blue-500 { --tw-ring-color: #461e96 !important; }

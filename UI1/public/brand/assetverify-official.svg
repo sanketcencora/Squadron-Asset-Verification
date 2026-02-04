@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="480" height="120" viewBox="0 0 480 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AssetVerify by Cencora">
+  <defs>
+    <linearGradient id="gPurple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6f54c8"/>
+      <stop offset="100%" stop-color="#461e96"/>
+    </linearGradient>
+  </defs>
+  <!-- Mark: gradient square embedding external mark asset -->
+  <g transform="translate(12,12)">
+    <rect x="0" y="0" width="72" height="72" rx="16" fill="url(#gPurple)"/>
+    <image href="/brand/cencora-logo%20(1).svg" x="8" y="8" width="56" height="56" preserveAspectRatio="xMidYMid meet" />
+  </g>
+
+  <!-- Text lockup: AssetVerify with by Cencora underneath -->
+  <g transform="translate(100,50)">
+    <text x="0" y="0" font-size="32" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-weight="700" fill="#461e96">AssetVerify</text>
+    <!-- Position 'by Cencora' to start under the 'V' of AssetVerify -->
+    <text x="118" y="30" font-size="16" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-style="italic" fill="#461e96">by Cencora</text>
+  </g>
+</svg>

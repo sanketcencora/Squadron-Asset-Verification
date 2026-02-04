@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Upload, CheckCircle, Package, AlertCircle, FileText, Camera } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 import { PeripheralType } from '@/data/mockData';
 
 interface EmployeeVerificationPageProps {
@@ -63,7 +64,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
 
   if (step === 'submitted') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-[#f2effa] flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-12 h-12 text-green-600" />
@@ -72,7 +73,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
           <p className="text-gray-600 mb-6">
             Thank you for completing your asset verification. Your response has been recorded and will be reviewed by the Asset Management team.
           </p>
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+          <div className="p-4 bg-[#f2effa] border border-[#e3dcf7] rounded-lg text-sm text-[#461e96]">
             <p className="font-medium mb-1">Submission Confirmation</p>
             <p>Reference ID: VER-{Date.now()}</p>
             <p>Date: {new Date().toLocaleString()}</p>
@@ -87,9 +88,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
       {/* Simple Header - No Internal Navigation */}
       <div className="bg-white border-b border-gray-200 py-4 px-6">
         <div className="max-w-4xl mx-auto flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Package className="w-6 h-6 text-white" />
-          </div>
+          <Logo className="h-8 w-auto" />
           <div>
             <h1 className="font-semibold text-gray-900">Asset Verification System</h1>
             <p className="text-sm text-gray-600">Annual Audit Compliance</p>
@@ -107,25 +106,25 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
             This process typically takes 3-5 minutes.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-              <Camera className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div className="flex items-start space-x-3 p-3 bg-[#f2effa] rounded-lg">
+              <Camera className="w-5 h-5 text-[#461e96] mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-900">Step 1</p>
-                <p className="text-sm text-blue-800">Upload hardware images</p>
+                <p className="text-sm font-medium text-[#2e136a]">Step 1</p>
+                <p className="text-sm text-[#461e96]">Upload hardware images</p>
               </div>
             </div>
-            <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div className="flex items-start space-x-3 p-3 bg-[#f2effa] rounded-lg">
+              <CheckCircle className="w-5 h-5 text-[#461e96] mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-900">Step 2</p>
-                <p className="text-sm text-blue-800">Confirm peripherals</p>
+                <p className="text-sm font-medium text-[#2e136a]">Step 2</p>
+                <p className="text-sm text-[#461e96]">Confirm peripherals</p>
               </div>
             </div>
-            <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-              <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div className="flex items-start space-x-3 p-3 bg-[#f2effa] rounded-lg">
+              <FileText className="w-5 h-5 text-[#461e96] mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-900">Step 3</p>
-                <p className="text-sm text-blue-800">Submit declaration</p>
+                <p className="text-sm font-medium text-[#2e136a]">Step 3</p>
+                <p className="text-sm text-[#461e96]">Submit declaration</p>
               </div>
             </div>
           </div>
@@ -150,7 +149,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
                   <div>
                     <h4 className="font-semibold text-gray-900">{asset.model}</h4>
                     <p className="text-sm text-gray-600 mt-1">{asset.assetType}</p>
-                    <p className="text-sm font-mono text-blue-600 mt-1">Service Tag: {asset.serviceTag}</p>
+                    <p className="text-sm font-mono text-[#461e96] mt-1">Service Tag: {asset.serviceTag}</p>
                   </div>
                   {uploadedImages[asset.id] && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -181,7 +180,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
                 ) : (
                   <div>
                     <label className="block">
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-[#461e96] hover:bg-[#f2effa] transition-colors">
                         <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                         <p className="text-sm font-medium text-gray-900 mb-1">
                           Upload Photo of {asset.assetType}
@@ -189,7 +188,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
                         <p className="text-sm text-gray-600 mb-3">
                           Ensure service tag <span className="font-mono font-medium">{asset.serviceTag}</span> is clearly visible
                         </p>
-                        <span className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        <span className="inline-flex items-center px-4 py-2 bg-[#461e96] text-white rounded-lg text-sm font-medium hover:bg-[#3b197f]">
                           <Camera className="w-4 h-4 mr-2" />
                           Choose Photo
                         </span>
@@ -312,12 +311,12 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
             </div>
           </div>
 
-          <label className="flex items-start p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-colors mb-6">
+          <label className="flex items-start p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-[#461e96] transition-colors mb-6">
             <input
               type="checkbox"
               checked={declarationAccepted}
               onChange={(e) => setDeclarationAccepted(e.target.checked)}
-              className="mt-1 mr-3 w-5 h-5 text-blue-600 rounded"
+              className="mt-1 mr-3 w-5 h-5 text-[#461e96] rounded"
             />
             <div className="flex-1">
               <p className="font-medium text-gray-900 mb-1">I confirm the above information is accurate</p>
@@ -331,7 +330,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
           <button
             onClick={handleSubmit}
             disabled={!isFormValid()}
-            className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2 text-lg"
+            className="w-full px-6 py-4 bg-[#461e96] text-white rounded-lg font-semibold hover:bg-[#3b197f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2 text-lg"
           >
             <CheckCircle className="w-6 h-6" />
             <span>Submit Verification</span>
@@ -363,7 +362,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
         <button
           onClick={handleSubmit}
           disabled={!isFormValid()}
-          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-6 py-3 bg-[#461e96] text-white rounded-lg font-semibold hover:bg-[#3b197f] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Submit Verification
         </button>

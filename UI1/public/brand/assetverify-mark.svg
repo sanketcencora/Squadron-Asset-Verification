@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AssetVerify mark">
+  <defs>
+    <linearGradient id="mGrad" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6f54c8"/>
+      <stop offset="100%" stop-color="#461e96"/>
+    </linearGradient>
+  </defs>
+  <!-- Stylized AV glyph without using text nodes -->
+  <g>
+    <path d="M8 42 L22 14 L30 14 L16 42 Z" fill="url(#mGrad)"/>
+    <path d="M26 14 L48 42 L40 42 L22 20 Z" fill="#6f54c8"/>
+  </g>
+</svg>

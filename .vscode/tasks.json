@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run UI1 dev server",
+			"type": "shell",
+			"command": "Push-Location \"C:\\Users\\a157196\\.vscode\\Squadron-Asset-Verification\\UI1\"; npm run dev",
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

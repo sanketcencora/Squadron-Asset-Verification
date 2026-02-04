@@ -63,15 +63,15 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
         {/* Progress Breadcrumb */}
         <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center space-x-2 text-sm">
-            <span className={step === 'search' ? 'text-blue-600 font-medium' : 'text-gray-600'}>
+            <span className={step === 'search' ? 'text-[#461e96] font-medium' : 'text-gray-600'}>
               1. Select Employee
             </span>
             <span className="text-gray-400">→</span>
-            <span className={step === 'selectPeripherals' ? 'text-blue-600 font-medium' : 'text-gray-600'}>
+            <span className={step === 'selectPeripherals' ? 'text-[#461e96] font-medium' : 'text-gray-600'}>
               2. Select Peripherals
             </span>
             <span className="text-gray-400">→</span>
-            <span className={step === 'confirm' ? 'text-blue-600 font-medium' : 'text-gray-600'}>
+            <span className={step === 'confirm' ? 'text-[#461e96] font-medium' : 'text-gray-600'}>
               3. Confirm
             </span>
           </div>
@@ -82,10 +82,10 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
           {/* Step 1: Search Employee */}
           {step === 'search' && (
             <div className="space-y-4">
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="p-4 bg-[#f2effa] border border-[#e3dcf7] rounded-lg">
                 <div className="flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div className="flex-1 text-sm text-blue-900">
+                  <AlertCircle className="w-5 h-5 text-[#461e96] mt-0.5" />
+                  <div className="flex-1 text-sm text-[#2e136a]">
                     <p className="font-medium mb-1">Hardware Assignment Note</p>
                     <p>
                       Hardware assets must be assigned via ServiceNow CSV import. This form only assigns peripherals
@@ -102,7 +102,7 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
                   value={employeeSearch}
                   onChange={(e) => setEmployeeSearch(e.target.value)}
                   placeholder="Search by Employee ID, name, or email..."
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#461e96]"
                   autoFocus
                 />
               </div>
@@ -120,11 +120,11 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
                       <button
                         key={employee.id}
                         onClick={() => handleEmployeeSelect(employee)}
-                        className="w-full p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+                        className="w-full p-4 border border-gray-200 rounded-lg hover:border-[#461e96] hover:bg-[#f2effa] transition-colors text-left"
                       >
                         <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="w-6 h-6 text-blue-600" />
+                          <div className="w-12 h-12 bg-[#ede7fb] rounded-full flex items-center justify-center">
+                            <User className="w-6 h-6 text-[#461e96]" />
                           </div>
                           <div className="flex-1">
                             <p className="font-medium text-gray-900">{employee.name}</p>
@@ -148,9 +148,9 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
           {/* Step 2: Select Peripherals */}
           {step === 'selectPeripherals' && (
             <div className="space-y-6">
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm font-medium text-blue-900 mb-2">Assigning peripherals to:</p>
-                <p className="text-sm text-blue-800">{selectedEmployee.name} ({selectedEmployee.employeeId})</p>
+              <div className="p-4 bg-[#f2effa] rounded-lg border border-[#e3dcf7]">
+                <p className="text-sm font-medium text-[#2e136a] mb-2">Assigning peripherals to:</p>
+                <p className="text-sm text-[#461e96]">{selectedEmployee.name} ({selectedEmployee.employeeId})</p>
               </div>
 
               {/* Show Employee's Assigned Hardware */}
@@ -203,7 +203,7 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
                         key={type}
                         className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                           isSelected
-                            ? 'border-blue-500 bg-blue-50'
+                            ? 'border-[#461e96] bg-[#f2effa]'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
@@ -211,7 +211,7 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handlePeripheralToggle(type)}
-                          className="mr-3 w-4 h-4 text-blue-600 rounded"
+                          className="mr-3 w-4 h-4 text-[#461e96] rounded"
                         />
                         <span className="font-medium text-gray-900">{type}</span>
                       </label>
@@ -230,7 +230,7 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
                 <button
                   onClick={() => setStep('confirm')}
                   disabled={selectedPeripherals.length === 0}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-[#461e96] text-white rounded-lg font-medium hover:bg-[#3b197f] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue to Review
                 </button>
@@ -294,7 +294,7 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
                     {selectedPeripherals.map((p) => (
                       <span
                         key={p.type}
-                        className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-200"
+                        className="px-3 py-1.5 bg-[#f2effa] text-[#461e96] rounded-full text-sm font-medium border border-[#e3dcf7]"
                       >
                         {p.type}
                       </span>
@@ -309,7 +309,7 @@ export function AssignPeripheralsFlow({ onClose, onComplete }: AssignPeripherals
                   <textarea
                     placeholder="Add any notes about this peripheral assignment..."
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#461e96]"
                   />
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Wifi, WifiOff, RefreshCw, Database, Server } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { API_BASE_URL } from '../services/api';
 
 export function ConnectionStatus() {
   const { isBackendConnected, loading, refetchAll, checkBackendHealth } = useData();
@@ -64,7 +65,7 @@ export function ConnectionBanner() {
         <WifiOff className="w-4 h-4 text-yellow-600" />
         <p className="text-sm text-yellow-800">
           Backend not connected. Using mock data. Start the backend server at{' '}
-          <code className="bg-yellow-100 px-1 rounded">http://localhost:8080</code> to connect.
+          <code className="bg-yellow-100 px-1 rounded">{API_BASE_URL.replace(/\/api\/?$/, '')}</code> to connect.
         </p>
       </div>
       <button

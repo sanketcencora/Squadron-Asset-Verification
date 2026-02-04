@@ -20,7 +20,8 @@ interface AuthContextType {
   currentRole: UserRole | null;
   currentUserId: string | null;
   currentUser: typeof mockUsers[0] | null;
-  login: (role: UserRole, userId: string) => void;
+  assetDepartment: 'IT Endpoint Team' | 'Network Equipment Team' | 'Workspace Team' | null;
+  login: (role: UserRole, userId: string, assetDepartment?: 'IT Endpoint Team' | 'Network Equipment Team' | 'Workspace Team') => void;
   logout: () => void;
 }
 
@@ -43,29 +44,42 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
     return sessionStorage.getItem('currentUserId');
   });
+  const [assetDepartment, setAssetDepartment] = useState<
+    'IT Endpoint Team' | 'Network Equipment Team' | 'Workspace Team' | null
+  >(() => {
+    return (sessionStorage.getItem('assetDepartment') as 'IT Endpoint Team' | 'Network Equipment Team' | 'Workspace Team' | null) || null;
+  });
 
   const currentUser = mockUsers.find(u => u.id === currentUserId) || null;
 
-  const login = (role: UserRole, userId: string) => {
+  const login = (role: UserRole, userId: string, dept?: 'IT Endpoint Team' | 'Network Equipment Team' | 'Workspace Team') => {
     setCurrentRole(role);
     setCurrentUserId(userId);
     setIsLoggedIn(true);
+    setAssetDepartment(dept ?? null);
     sessionStorage.setItem('isLoggedIn', 'true');
     sessionStorage.setItem('currentRole', role);
     sessionStorage.setItem('currentUserId', userId);
+    if (dept) {
+      sessionStorage.setItem('assetDepartment', dept);
+    } else {
+      sessionStorage.removeItem('assetDepartment');
+    }
   };
 
   const logout = () => {
     setIsLoggedIn(false);
     setCurrentRole(null);
     setCurrentUserId(null);
+    setAssetDepartment(null);
     sessionStorage.removeItem('isLoggedIn');
     sessionStorage.removeItem('currentRole');
     sessionStorage.removeItem('currentUserId');
+    sessionStorage.removeItem('assetDepartment');
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, currentRole, currentUserId, currentUser, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, currentRole, currentUserId, currentUser, assetDepartment, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -153,8 +167,8 @@ function LoginPageWrapper() {
     }
   }, [isLoggedIn, currentRole, navigate]);
 
-  const handleLogin = (role: UserRole, userId: string) => {
-    login(role, userId);
+  const handleLogin = (role: UserRole, userId: string, dept?: 'IT Endpoint Team' | 'Network Equipment Team' | 'Workspace Team') => {
+    login(role, userId, dept);
     if (role === 'employee') {
       navigate('/verification');
     } else {
@@ -222,15 +236,15 @@ function ReportsPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-4">Audit Reports</h1>
       <p className="text-gray-600">Generate and export compliance reports</p>
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-[#461e96] text-left">
           <h3 className="font-semibold text-gray-900 mb-2">Asset Reconciliation Report</h3>
           <p className="text-sm text-gray-600">Compare SAP GL data with verified assets</p>
         </button>
-        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-[#461e96] text-left">
           <h3 className="font-semibold text-gray-900 mb-2">Verification Status Report</h3>
           <p className="text-sm text-gray-600">Campaign completion and compliance rates</p>
         </button>
-        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-[#461e96] text-left">
           <h3 className="font-semibold text-gray-900 mb-2">Exception Summary Report</h3>
           <p className="text-sm text-gray-600">All mismatches and missing devices</p>
         </button>
@@ -290,7 +304,7 @@ function EquipmentReportsPage() {
         <p className="text-gray-500">Power BI reports are integrated in the main dashboard view.</p>
         <button
           onClick={() => navigate('/dashboard')}
-          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="mt-4 px-6 py-2 bg-[#461e96] text-white rounded-lg hover:bg-[#3b197f]"
         >
           Go to Dashboard
         </button>
@@ -317,13 +331,26 @@ function EmployeeVerificationWrapper() {
 
 // Dynamic Dashboard based on role
 function DashboardRouter() {
-  const { currentRole } = useAuth();
+  const { currentRole, assetDepartment, currentUserId } = useAuth();
   
   if (currentRole === 'finance') {
     return <FinanceDashboardPage />;
   }
   if (currentRole === 'assetManager') {
-    return <AssetManagerDashboardPage />;
+    if (assetDepartment === 'IT Endpoint Team' || !assetDepartment) {
+      return <AssetManagerDashboardPage />;
+    }
+    if (assetDepartment === 'Workspace Team') {
+      return <FurnitureDashboard userId={currentUserId || ''} />;
+    }
+    if (assetDepartment === 'Network Equipment Team') {
+      return (
+        <>
+          <NetworkEquipmentDashboard userId={currentUserId || ''} />
+          <AudioVideoDashboard userId={currentUserId || ''} />
+        </>
+      );
+    }
   }
   if (currentRole === 'networkEquipment' || currentRole === 'audioVideo' || currentRole === 'furniture') {
     return <EquipmentManagerDashboard />;
