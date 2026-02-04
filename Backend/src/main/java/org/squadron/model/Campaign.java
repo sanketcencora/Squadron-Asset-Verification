@@ -2,6 +2,7 @@ package org.squadron.model;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -44,6 +45,7 @@ public class Campaign extends PanacheEntity {
     public String filtersJson;
     
     @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     public List<VerificationRecord> verificationRecords;
     
     // Enum definition

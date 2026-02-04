@@ -2,6 +2,7 @@ package org.squadron.model;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import java.time.LocalDateTime;
 
 @Entity
@@ -10,6 +11,7 @@ public class VerificationRecord extends PanacheEntity {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id")
+    @JsonBackReference
     public Campaign campaign;
     
     @Column(nullable = false)

@@ -6,7 +6,6 @@ import {
   Users, 
   AlertTriangle, 
   Plus, 
-  FileSpreadsheet,
   Package,
   CheckCircle,
   Clock,
@@ -18,9 +17,10 @@ import {
   Armchair,
   Box,
   Download,
-  Loader2
+  Loader2,
+  Upload
 } from 'lucide-react';
-import { exportToExcel, formatDateForExcel, ExcelExportRow } from '@/utils/excelExport';
+import { formatDateForExcel } from '@/utils/excelExport';
 import { 
   BarChart, 
   Bar, 
@@ -95,6 +95,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [selectedAssetType, setSelectedAssetType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
   
   // State for backend data
   const [loading, setLoading] = useState(true);
@@ -104,6 +105,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
   const [assetStats, setAssetStats] = useState<Record<string, any>>({});
   const [equipmentStats, setEquipmentStats] = useState<Record<string, any>>({});
   const [verificationStats, setVerificationStats] = useState<Record<string, any>>({});
+  const [availableTeams, setAvailableTeams] = useState<string[]>([]);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
 
   // Fetch data from backend on mount
@@ -117,13 +119,14 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
           setIsBackendConnected(true);
           
           // Fetch all data from backend
-          const [assetsData, equipmentData, campaignsData, assetStatsData, equipmentStatsData, verificationStatsData] = await Promise.all([
+          const [assetsData, equipmentData, campaignsData, assetStatsData, equipmentStatsData, verificationStatsData, departmentsData] = await Promise.all([
             api.assets.getAll(),
             api.equipment.getAll(),
             api.campaigns.getAll(),
             api.assets.getStats(),
             api.equipment.getStats(),
-            api.verifications.getStats()
+            api.verifications.getStats(),
+            api.users.getAllDepartments()
           ]);
           
           setHardwareAssets(assetsData);
@@ -132,6 +135,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
           setAssetStats(assetStatsData);
           setEquipmentStats(equipmentStatsData);
           setVerificationStats(verificationStatsData);
+          setAvailableTeams(departmentsData);
         }
       } catch (error) {
         console.warn('Backend not available, using mock data:', error);
@@ -150,24 +154,20 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
 
   // Calculate KPIs from fetched data
   const totalAssets = isBackendConnected 
-    ? (assetStats.assigned || hardwareAssets.filter(a => a.status === 'Assigned').length)
-    : mockHardwareAssets.filter(a => a.status === 'Assigned').length;
+    ? (assetStats.total || hardwareAssets.length)
+    : mockHardwareAssets.filter(a => a.status === 'Assigned' || a.status ==='Instock').length;
     
   const totalVerified = isBackendConnected
-    ? (verificationStats.verified || assetStats.verified || 0)
+    ? (verificationStats.verified || 0)
     : mockUsers.filter(u => u.verificationStatus === 'Verified').length;
     
   const totalPending = isBackendConnected
-    ? (verificationStats.pending || assetStats.pending || 0)
+    ? (verificationStats.pending || 0)
     : mockUsers.filter(u => u.verificationStatus === 'Pending').length;
     
   const totalOverdue = isBackendConnected
-    ? (verificationStats.overdue || assetStats.overdue || 0)
+    ? (verificationStats.overdue || 0)
     : mockUsers.filter(u => u.verificationStatus === 'Overdue').length;
-    
-  const totalExceptions = isBackendConnected
-    ? (verificationStats.exception || assetStats.exception || 0)
-    : mockUsers.filter(u => u.verificationStatus === 'Exception').length;
     
   const verificationRate = totalAssets > 0 ? Math.round((totalVerified / totalAssets) * 100) : 0;
 
@@ -249,87 +249,66 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
     { month: 'Jan', verified: totalVerified || 920, pending: totalPending || 55, total: totalAssets || 975 }
   ];
 
-  // Dynamic verification status from backend stats
+  // Dynamic verification status from backend stats - Removed Exceptions
   const verificationStatusData = [
     { name: 'Verified', value: totalVerified || 156, color: '#10B981' },
     { name: 'Pending', value: totalPending || 72, color: '#F59E0B' },
-    { name: 'Overdue', value: totalOverdue || 14, color: '#EF4444' },
-    { name: 'Exception', value: totalExceptions || 3, color: '#F97316' }
+    { name: 'Overdue', value: totalOverdue || 14, color: '#EF4444' }
   ];
 
   const COLORS = ['#3B82F6', '#06B6D4', '#8B5CF6', '#A855F7', '#F97316', '#6B7280'];
 
-  const handleExportPendingAndExceptions = () => {
-    // Get employees with pending or exception status
-    const employeesWithIssues = mockUsers.filter(
-      u => u.verificationStatus === 'Pending' || 
-           u.verificationStatus === 'Overdue' || 
-           u.verificationStatus === 'Exception'
-    );
+  const handleSAPCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    // Map to export format
-    const exportData: ExcelExportRow[] = [];
+    // Validate file type
+    if (!file.name.endsWith('.csv')) {
+      setUploadStatus({ type: 'error', message: 'Please upload a valid CSV file' });
+      setTimeout(() => setUploadStatus({ type: null, message: '' }), 3000);
+      return;
+    }
 
-    employeesWithIssues.forEach(employee => {
-      // Get all assets assigned to this employee
-      const assignedAssets = mockHardwareAssets.filter(
-        a => a.assignedTo === employee.employeeId
-      );
+    // Read and parse CSV file
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          setUploadStatus({ type: 'error', message: 'CSV file is empty or invalid' });
+          setTimeout(() => setUploadStatus({ type: null, message: '' }), 3000);
+          return;
+        }
 
-      if (assignedAssets.length === 0) {
-        // Employee has no assigned assets
-        exportData.push({
-          employeeId: employee.employeeId,
-          employeeName: employee.name,
-          email: employee.email,
-          team: employee.team,
-          location: employee.location,
-          serviceTag: 'N/A',
-          assetType: 'N/A',
-          model: 'N/A',
-          verificationStatus: employee.verificationStatus,
-          lastVerifiedDate: formatDateForExcel(employee.lastVerifiedDate),
-          issueDescription: 'No assets assigned'
+        // TODO: Send to backend API endpoint
+        // await api.finance.uploadSAPGL(file);
+        
+        console.log('SAP GL CSV uploaded:', {
+          filename: file.name,
+          size: file.size,
+          rows: lines.length - 1
         });
-      } else {
-        // Add a row for each asset
-        assignedAssets.forEach(asset => {
-          exportData.push({
-            employeeId: employee.employeeId,
-            employeeName: employee.name,
-            email: employee.email,
-            team: employee.team,
-            location: employee.location,
-            serviceTag: asset.serviceTag,
-            assetType: asset.assetType,
-            model: asset.model,
-            verificationStatus: asset.verificationStatus || employee.verificationStatus,
-            lastVerifiedDate: formatDateForExcel(asset.lastVerifiedDate),
-            issueDescription: getIssueDescription(employee.verificationStatus, asset.verificationStatus)
-          });
-        });
+        
+        setUploadStatus({ type: 'success', message: `Successfully uploaded ${file.name} (${lines.length - 1} rows)` });
+        setTimeout(() => setUploadStatus({ type: null, message: '' }), 5000);
+        
+        // Reset file input
+        event.target.value = '';
+      } catch (error) {
+        console.error('Error processing CSV:', error);
+        setUploadStatus({ type: 'error', message: 'Failed to process CSV file' });
+        setTimeout(() => setUploadStatus({ type: null, message: '' }), 3000);
       }
-    });
-
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().split('T')[0];
-    const filename = `Pending_And_Exceptions_Report_${timestamp}.xlsx`;
-
-    // Export to Excel
-    exportToExcel(exportData, filename);
-  };
-
-  const getIssueDescription = (employeeStatus: string, assetStatus?: string): string => {
-    if (employeeStatus === 'Exception' || assetStatus === 'Exception') {
-      return 'Verification exception - requires review';
-    }
-    if (employeeStatus === 'Overdue' || assetStatus === 'Overdue') {
-      return 'Verification overdue - deadline passed';
-    }
-    if (employeeStatus === 'Pending' || assetStatus === 'Pending') {
-      return 'Verification pending - awaiting employee action';
-    }
-    return '';
+    };
+    
+    reader.onerror = () => {
+      setUploadStatus({ type: 'error', message: 'Failed to read file' });
+      setTimeout(() => setUploadStatus({ type: null, message: '' }), 3000);
+    };
+    
+    reader.readAsText(file);
   };
 
   return (
@@ -345,7 +324,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
       )}
       
       {/* Backend Connection Indicator */}
-      {!loading && (
+      {/* {!loading && (
         <div className={`mb-4 px-3 py-2 rounded-lg text-sm flex items-center space-x-2 ${
           isBackendConnected ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
         }`}>
@@ -356,7 +335,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
               : 'Using mock data - start backend at http://localhost:8080 for live data'}
           </span>
         </div>
-      )}
+      )} */}
       
       {/* Header */}
       <div className="mb-8">
@@ -366,13 +345,16 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
             <p className="text-gray-600 mt-1">Monitor verification campaigns and audit compliance</p>
           </div>
           <div className="flex items-center space-x-3">
-            <button
-              onClick={handleExportPendingAndExceptions}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Export Pending & Exceptions</span>
-            </button>
+            <label className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center space-x-2 cursor-pointer">
+              <Upload className="w-4 h-4" />
+              <span>Upload SAP GL CSV</span>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleSAPCSVUpload}
+                className="hidden"
+              />
+            </label>
             <button
               onClick={onCreateCampaign}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center space-x-2"
@@ -382,10 +364,21 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
             </button>
           </div>
         </div>
+        
+        {/* Upload Status Message */}
+        {uploadStatus.type && (
+          <div className={`mt-3 px-4 py-2 rounded-lg text-sm ${
+            uploadStatus.type === 'success' 
+              ? 'bg-green-50 text-green-700 border border-green-200' 
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {uploadStatus.message}
+          </div>
+        )}
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* KPI Cards - Removed Exceptions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <KPICard
           title="Total Hardware Assets"
           value={totalAssets}
@@ -406,12 +399,6 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
           icon={Clock}
           color="yellow"
         />
-        <KPICard
-          title="Overdue + Exceptions"
-          value={totalOverdue + totalExceptions}
-          icon={AlertTriangle}
-          color="red"
-        />
       </div>
 
       {/* Comprehensive Asset Overview - Power BI Dashboard Section */}
@@ -419,15 +406,53 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Comprehensive Asset Overview - Monthly & Annual Audits</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Comprehensive Asset Overview</h2>
               <p className="text-sm text-gray-600 mt-1">All asset categories including hardware, network, servers, audio video, and furniture</p>
             </div>
             <div className="flex items-center space-x-2">
-              <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+              {/* <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Monthly View
-              </button>
-              <button className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                Annual View
+              </button> */}
+              <button 
+                onClick={() => {
+                  // Prepare monthly report data
+                  const reportData = [
+                    ['Category', 'Total Items', 'Total Value ($)', 'Percentage'],
+                    ['Hardware', totalAssets, hardwareValue, ((totalAssets / totalAllAssets) * 100).toFixed(2) + '%'],
+                    ['Network', totalNetworkItems, totalNetworkValue, ((totalNetworkItems / totalAllAssets) * 100).toFixed(2) + '%'],
+                    ['Servers', totalServerItems, totalServerValue, ((totalServerItems / totalAllAssets) * 100).toFixed(2) + '%'],
+                    ['Audio Video', totalAVItems, totalAVValue, ((totalAVItems / totalAllAssets) * 100).toFixed(2) + '%'],
+                    ['Furniture', totalFurnitureItems, totalFurnitureValue, ((totalFurnitureItems / totalAllAssets) * 100).toFixed(2) + '%'],
+                    ['Other', totalOtherItems, totalOtherValue, ((totalOtherItems / totalAllAssets) * 100).toFixed(2) + '%'],
+                    [''],
+                    ['Total Assets', totalAllAssets, totalAllValue, '100%'],
+                    [''],
+                    ['Verification Status', 'Count', 'Percentage', ''],
+                    ['Verified', totalVerified, ((totalVerified / totalAssets) * 100).toFixed(2) + '%', ''],
+                    ['Pending', totalPending, ((totalPending / totalAssets) * 100).toFixed(2) + '%', ''],
+                    ['Overdue', totalOverdue, ((totalOverdue / totalAssets) * 100).toFixed(2) + '%', ''],
+                    [''],
+                    ['Report Generated', formatDateForExcel(new Date().toISOString()), '', '']
+                  ];
+
+                  // Convert to CSV
+                  const csvContent = reportData.map(row => row.join(',')).join('\n');
+                  
+                  // Create blob and download
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const link = document.createElement('a');
+                  const url = URL.createObjectURL(blob);
+                  link.setAttribute('href', url);
+                  link.setAttribute('download', `Monthly_Asset_Report_${formatDateForExcel(new Date().toISOString())}.csv`);
+                  link.style.visibility = 'hidden';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center space-x-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>Monthly Report Download</span>
               </button>
             </div>
           </div>
@@ -669,7 +694,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
             </div>
 
             {/* Additional Insights */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-6 mt-6">
+            {/* <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-6 mt-6">
               <div className="flex items-start space-x-4">
                 <div className="p-3 bg-white rounded-lg">
                   <BarChart3 className="w-6 h-6 text-blue-600" />
@@ -695,7 +720,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -805,7 +830,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Teams</option>
-              {teams.map(team => (
+              {(isBackendConnected ? availableTeams : teams).map(team => (
                 <option key={team} value={team}>{team}</option>
               ))}
             </select>
@@ -870,46 +895,103 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {teams.slice(0, 5).map((team, index) => {
-                const total = Math.floor(Math.random() * 100) + 50;
-                const verified = Math.floor(total * 0.6);
-                const pending = Math.floor(total * 0.25);
-                const overdue = Math.floor(total * 0.1);
-                const exceptions = total - verified - pending - overdue;
-                const progress = Math.round((verified / total) * 100);
+              {(() => {
+                // Get teams to display based on backend connection
+                const teamsToDisplay = isBackendConnected ? availableTeams : teams;
+                
+                // Calculate team statistics from backend data
+                return teamsToDisplay.map((team) => {
+                  if (isBackendConnected) {
+                    // Filter assets by team/department
+                    const teamAssets = hardwareAssets.filter(asset => 
+                      asset.team === team || asset.assignedTo?.includes(team)
+                    );
+                    
+                    const total = teamAssets.length;
+                    const verified = teamAssets.filter(a => a.verificationStatus === 'Verified').length;
+                    const pending = teamAssets.filter(a => a.verificationStatus === 'Pending').length;
+                    const overdue = teamAssets.filter(a => a.verificationStatus === 'Overdue').length;
+                    const exceptions = teamAssets.filter(a => a.verificationStatus === 'Exception').length;
+                    const progress = total > 0 ? Math.round((verified / total) * 100) : 0;
 
-                return (
-                  <tr key={team} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-medium text-gray-900">{team}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-700">{total}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-green-600 font-medium">{verified}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-yellow-600 font-medium">{pending}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-red-600 font-medium">{overdue}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-orange-600 font-medium">{exceptions}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden max-w-[120px]">
-                          <div
-                            className="h-full bg-green-500 rounded-full"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-gray-900 w-12">{progress}%</span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                    // Apply filters
+                    if (selectedTeam !== 'all' && team !== selectedTeam) return null;
+                    if (selectedAssetType !== 'all' && !teamAssets.some(a => a.assetType === selectedAssetType)) return null;
+                    
+                    return (
+                      <tr key={team} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="font-medium text-gray-900">{team}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-700">{total}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-green-600 font-medium">{verified}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-yellow-600 font-medium">{pending}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-red-600 font-medium">{overdue}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-orange-600 font-medium">{exceptions}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden max-w-[120px]">
+                              <div
+                                className="h-full bg-green-500 rounded-full"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900 w-12">{progress}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  } else {
+                    // Mock data fallback
+                    const total = Math.floor(Math.random() * 100) + 50;
+                    const verified = Math.floor(total * 0.6);
+                    const pending = Math.floor(total * 0.25);
+                    const overdue = Math.floor(total * 0.1);
+                    const exceptions = total - verified - pending - overdue;
+                    const progress = Math.round((verified / total) * 100);
+
+                    return (
+                      <tr key={team} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="font-medium text-gray-900">{team}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-700">{total}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-green-600 font-medium">{verified}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-yellow-600 font-medium">{pending}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-red-600 font-medium">{overdue}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-orange-600 font-medium">{exceptions}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden max-w-[120px]">
+                              <div
+                                className="h-full bg-green-500 rounded-full"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900 w-12">{progress}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+                }).filter(row => row !== null);
+              })()}
             </tbody>
           </table>
         </div>
