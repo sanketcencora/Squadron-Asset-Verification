@@ -433,7 +433,7 @@ export const mockVerificationRecords: VerificationRecord[] = [
   }
 ];
 
-export const teams = ['Engineering', 'Marketing', 'Sales', 'Finance', 'HR', 'Operations', 'IT'];
+export const teams = ['Alliance IT BusApps', 'BG Data Analytics IT', 'CBS PMO', 'Cloud Provisioning', 'Dist Svcs', 'Mfg.', 'eCommerce & Portal', 'Replenish IT', 'Quality Assurance'];
 export const locations = ['New York', 'San Francisco', 'Austin', 'Chicago', 'Seattle', 'Boston'];
 
 // Specialized Equipment Categories

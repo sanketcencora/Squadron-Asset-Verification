@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { mockHardwareAssets, mockPeripherals, mockUsers, HardwareAsset, Peripheral } from '@/data/mockData';
 import {
@@ -12,9 +12,13 @@ import {
   Download,
   CheckCircle,
   AlertCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Loader2,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { exportToExcel, formatDateForExcel, ExcelExportRow } from '@/utils/excelExport';
+import { api, HardwareAssetAPI, PeripheralAPI } from '../services/api';
 
 interface AssetManagerDashboardProps {
   onAssignAsset: () => void;
@@ -23,15 +27,72 @@ interface AssetManagerDashboardProps {
 export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardProps) {
   const [activeTab, setActiveTab] = useState<'instock' | 'assigned' | 'peripherals' | 'exceptions'>('instock');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
+  
+  // State for backend data
+  const [hardwareAssets, setHardwareAssets] = useState<HardwareAssetAPI[]>([]);
+  const [peripherals, setPeripherals] = useState<PeripheralAPI[]>([]);
 
-  const instockAssets = mockHardwareAssets.filter(a => a.status === 'Instock');
-  const assignedAssets = mockHardwareAssets.filter(a => a.status === 'Assigned');
-  const exceptionAssets = mockHardwareAssets.filter(a => a.verificationStatus === 'Exception' || a.verificationStatus === 'Overdue');
+  // Fetch data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [assetsData, peripheralsData] = await Promise.all([
+          api.assets.getAll(),
+          api.peripherals.getAll()
+        ]);
+        setHardwareAssets(assetsData);
+        setPeripherals(peripheralsData);
+        setIsBackendConnected(true);
+      } catch (error) {
+        console.error('Failed to fetch from backend, using mock data:', error);
+        setIsBackendConnected(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Convert backend data to match UI format, or fall back to mock data
+  const displayAssets: HardwareAsset[] = isBackendConnected
+    ? hardwareAssets.map(asset => ({
+        id: asset.id?.toString() || '',
+        serviceTag: asset.serviceTag,
+        assetType: asset.assetType as 'Laptop' | 'Monitor' | 'Mobile',
+        model: asset.model,
+        cost: asset.cost,
+        purchaseDate: asset.purchaseDate,
+        status: asset.status as 'Instock' | 'Assigned',
+        assignedTo: asset.assignedTo || undefined,
+        assignedToName: asset.assignedToName || undefined,
+        assignedDate: asset.assignedDate || undefined,
+        verificationStatus: asset.verificationStatus as 'Verified' | 'Pending' | 'Exception' | 'Overdue' | undefined,
+        lastVerifiedDate: asset.lastVerifiedDate || undefined
+      }))
+    : mockHardwareAssets;
+
+  const displayPeripherals: Peripheral[] = isBackendConnected
+    ? peripherals.map(p => ({
+        id: p.id?.toString() || '',
+        type: p.type as 'Charger' | 'Headphones' | 'Dock' | 'Mouse' | 'Keyboard' | 'USB-C Cable',
+        serialNumber: p.serialNumber || undefined,
+        assignedTo: p.assignedTo,
+        assignedToName: p.assignedToName,
+        assignedDate: p.assignedDate,
+        verified: p.verified
+      }))
+    : mockPeripherals;
+
+  const instockAssets = displayAssets.filter(a => a.status === 'Instock');
+  const assignedAssets = displayAssets.filter(a => a.status === 'Assigned');
+  const exceptionAssets = displayAssets.filter(a => a.verificationStatus === 'Exception' || a.verificationStatus === 'Overdue');
 
   const tabs = [
     { id: 'instock' as const, label: 'Instock Hardware', count: instockAssets.length, icon: Package },
     { id: 'assigned' as const, label: 'Assigned Hardware', count: assignedAssets.length, icon: CheckCircle },
-    { id: 'peripherals' as const, label: 'Assigned Peripherals', count: mockPeripherals.length, icon: Package },
+    { id: 'peripherals' as const, label: 'Assigned Peripherals', count: displayPeripherals.length, icon: Package },
     { id: 'exceptions' as const, label: 'Verification Exceptions', count: exceptionAssets.length, icon: AlertCircle }
   ];
 
@@ -62,7 +123,7 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
         'Last Verified': asset.lastVerifiedDate ? formatDateForExcel(asset.lastVerifiedDate) : '—'
       }));
     } else if (activeTab === 'peripherals') {
-      rows = mockPeripherals.map(peripheral => ({
+      rows = displayPeripherals.map(peripheral => ({
         'Peripheral Type': peripheral.type,
         'Serial Number': peripheral.serialNumber || '—',
         'Assigned To': peripheral.assignedToName,
@@ -82,7 +143,34 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
   };
 
   return (
-    <div className="p-8">
+    <div className="p-8 relative">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-50">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            <span className="text-gray-600">Loading data...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Connection Status Banner */}
+      <div className={`mb-4 px-4 py-2 rounded-lg flex items-center space-x-2 text-sm ${
+        isBackendConnected ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+      }`}>
+        {isBackendConnected ? (
+          <>
+            <Wifi className="w-4 h-4" />
+            <span>Connected to backend - Showing live data</span>
+          </>
+        ) : (
+          <>
+            <WifiOff className="w-4 h-4" />
+            <span>Using mock data - Backend not available</span>
+          </>
+        )}
+      </div>
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -116,7 +204,7 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
             <p className="text-sm text-gray-600">Total Inventory</p>
             <Package className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-3xl font-semibold text-gray-900">{mockHardwareAssets.length}</p>
+          <p className="text-3xl font-semibold text-gray-900">{displayAssets.length}</p>
           <p className="text-sm text-gray-600 mt-1">Hardware assets</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-6">

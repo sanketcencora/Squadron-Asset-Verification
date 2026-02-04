@@ -1,5 +1,6 @@
 import { UserRole } from '@/data/mockData';
 import { LayoutDashboard, Package, FileText, Settings, LogOut, Search, Bell } from 'lucide-react';
+import { ConnectionStatus } from './ConnectionStatus';
 
 interface NavigationProps {
   role: UserRole;
@@ -62,6 +63,9 @@ export function Navigation({ role, currentPage, onNavigate, onLogout, userName }
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Connection Status */}
+            <ConnectionStatus />
+
             {/* Notifications */}
             <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
               <Bell className="w-5 h-5" />

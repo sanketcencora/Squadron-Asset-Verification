@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { teams, AssetType } from '@/data/mockData';
-import { X, CheckCircle, Calendar, Users, Package, Mail, ChevronRight } from 'lucide-react';
+import { X, CheckCircle, Calendar, Users, Package, Mail, ChevronRight, Loader2 } from 'lucide-react';
+import { api, User } from '@/services/api';
 
 interface CreateCampaignFlowProps {
   onClose: () => void;
@@ -9,15 +10,42 @@ interface CreateCampaignFlowProps {
 
 export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowProps) {
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedEmployees, setSelectedEmployees] = useState<User[]>([]);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
   const [campaignData, setCampaignData] = useState({
     name: '',
     description: '',
+    startDate: '',
     deadline: '',
     selectedTeams: [] as string[],
     selectedAssetTypes: [] as AssetType[],
-    highValueOnly: false,
     emailReminders: 'weekly'
   });
+
+  // Fetch employees when teams change
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      if (campaignData.selectedTeams.length === 0) {
+        setSelectedEmployees([]);
+        return;
+      }
+      
+      setIsLoadingEmployees(true);
+      try {
+        const employees = await api.users.getByDepartments(campaignData.selectedTeams);
+        setSelectedEmployees(employees);
+      } catch (err) {
+        console.error('Failed to fetch employees:', err);
+        setSelectedEmployees([]);
+      } finally {
+        setIsLoadingEmployees(false);
+      }
+    };
+
+    fetchEmployees();
+  }, [campaignData.selectedTeams]);
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
@@ -27,17 +55,47 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
     if (step > 1) setStep(step - 1);
   };
 
-  const handleLaunch = () => {
-    // In a real app, this would create the campaign
-    onComplete();
+  const handleLaunch = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    
+    try {
+      // Build filters JSON
+      const filters = {
+        teams: campaignData.selectedTeams,
+        assetTypes: campaignData.selectedAssetTypes,
+        emailReminders: campaignData.emailReminders,
+        employeeIds: selectedEmployees.map(e => e.employeeId)
+      };
+
+      // Create campaign via API
+      await api.campaigns.create({
+        name: campaignData.name,
+        description: campaignData.description,
+        createdBy: 'FIN001', // Current user's employee ID
+        startDate: campaignData.startDate,
+        deadline: campaignData.deadline,
+        totalEmployees: estimatedEmployees,
+        totalAssets: Math.round(estimatedAssets),
+        totalPeripherals: Math.round(estimatedPeripherals),
+        filtersJson: JSON.stringify(filters)
+      });
+
+      onComplete();
+    } catch (err) {
+      console.error('Failed to create campaign:', err);
+      setError('Failed to create campaign. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const assetTypes: AssetType[] = ['Laptop', 'Monitor', 'Mobile'];
 
-  // Calculate totals for review
-  const estimatedEmployees = campaignData.selectedTeams.length * 45; // Mock calculation
-  const estimatedAssets = estimatedEmployees * 1.5; // Mock calculation
-  const estimatedPeripherals = estimatedAssets * 2; // Mock calculation
+  // Calculate totals based on actual employee data from backend
+  const estimatedEmployees = selectedEmployees.length;
+  const estimatedAssets = Math.ceil(estimatedEmployees * 1.5); // Estimated 1.5 assets per employee
+  const estimatedPeripherals = Math.ceil(estimatedAssets * 2); // Estimated 2 peripherals per asset
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -126,23 +184,44 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Verification Deadline *
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="date"
-                    value={campaignData.deadline}
-                    onChange={(e) => setCampaignData({ ...campaignData, deadline: e.target.value })}
-                    className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Campaign Start Date *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="date"
+                      value={campaignData.startDate}
+                      onChange={(e) => setCampaignData({ ...campaignData, startDate: e.target.value })}
+                      className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Campaign will start on this date
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">
-                  Employees will be notified to complete verification by this date
-                </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Campaign End Date *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="date"
+                      value={campaignData.deadline}
+                      onChange={(e) => setCampaignData({ ...campaignData, deadline: e.target.value })}
+                      min={campaignData.startDate}
+                      className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Employees must complete verification by this date
+                  </p>
+                </div>
               </div>
 
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -160,6 +239,35 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Select Teams *
                 </label>
+                {/* Select All option */}
+                <div className="mb-3">
+                  <label
+                    className="flex items-center p-4 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={campaignData.selectedTeams.length === teams.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCampaignData({
+                            ...campaignData,
+                            selectedTeams: [...teams]
+                          });
+                        } else {
+                          setCampaignData({
+                            ...campaignData,
+                            selectedTeams: []
+                          });
+                        }
+                      }}
+                      className="mr-3 w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="font-semibold text-blue-700">Select All Teams</span>
+                    <span className="ml-auto text-sm text-blue-600">
+                      ({campaignData.selectedTeams.length}/{teams.length} selected)
+                    </span>
+                  </label>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   {teams.map((team) => (
                     <label
@@ -224,20 +332,32 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 pt-6">
-                <label className="flex items-start p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={campaignData.highValueOnly}
-                    onChange={(e) => setCampaignData({ ...campaignData, highValueOnly: e.target.checked })}
-                    className="mt-1 mr-3 w-4 h-4 text-blue-600 rounded"
-                  />
-                  <div>
-                    <span className="font-medium text-gray-900 block">High-Value Assets Only</span>
-                    <span className="text-sm text-gray-600">Only include assets valued over $1,000</span>
+              {/* Show selected employees count */}
+              {campaignData.selectedTeams.length > 0 && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Users className="w-5 h-5 text-green-600" />
+                    <div className="flex-1">
+                      {isLoadingEmployees ? (
+                        <p className="text-sm text-green-700 flex items-center">
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Loading employees...
+                        </p>
+                      ) : (
+                        <p className="text-sm font-medium text-green-900">
+                          {selectedEmployees.length} employee{selectedEmployees.length !== 1 ? 's' : ''} found in selected teams
+                        </p>
+                      )}
+                      {!isLoadingEmployees && selectedEmployees.length > 0 && (
+                        <p className="text-xs text-green-700 mt-1">
+                          {selectedEmployees.map(e => e.name).join(', ')}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </label>
-              </div>
+                </div>
+              )}
+
             </div>
           )}
 
@@ -315,12 +435,28 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
                         {campaignData.selectedAssetTypes.length > 0 ? campaignData.selectedAssetTypes.join(', ') : 'None selected'}
                       </dd>
                     </div>
-                    <div className="flex justify-between">
-                      <dt className="text-gray-600">High-Value Only:</dt>
-                      <dd className="font-medium text-gray-900">{campaignData.highValueOnly ? 'Yes' : 'No'}</dd>
-                    </div>
+
                   </dl>
                 </div>
+
+                {/* Show employees in selected teams */}
+                {selectedEmployees.length > 0 && (
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Selected Employees ({selectedEmployees.length})</h4>
+                    <div className="max-h-32 overflow-y-auto">
+                      <div className="flex flex-wrap gap-2">
+                        {selectedEmployees.map((employee) => (
+                          <span
+                            key={employee.id}
+                            className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full border border-blue-200"
+                          >
+                            {employee.name} ({employee.department})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-3">Email Reminder Cadence</h4>
@@ -387,13 +523,28 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
                 Next Step
               </button>
             ) : (
-              <button
-                onClick={handleLaunch}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 flex items-center space-x-2"
-              >
-                <CheckCircle className="w-5 h-5" />
-                <span>Launch Campaign</span>
-              </button>
+              <div className="flex items-center space-x-4">
+                {error && (
+                  <p className="text-red-600 text-sm">{error}</p>
+                )}
+                <button
+                  onClick={handleLaunch}
+                  disabled={isSubmitting}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      <span>Launch Campaign</span>
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         </div>

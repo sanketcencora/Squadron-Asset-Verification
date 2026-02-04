@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { LoginPage } from '@/pages/LoginPage';
 import { FinanceDashboard } from '@/pages/FinanceDashboard';
 import { AssetManagerDashboard } from '@/pages/AssetManagerDashboard';
@@ -9,191 +10,242 @@ import { VerificationReviewPage } from '@/pages/VerificationReviewPage';
 import { NetworkEquipmentDashboard } from '@/pages/NetworkEquipmentDashboard';
 import { AudioVideoDashboard } from '@/pages/AudioVideoDashboard';
 import { FurnitureDashboard } from '@/pages/FurnitureDashboard';
+import { CampaignsPage } from '@/pages/CampaignsPage';
 import { Navigation } from '@/components/Navigation';
 import { UserRole, mockUsers } from '@/data/mockData';
 
-export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
-  const [showAssignPeripherals, setShowAssignPeripherals] = useState(false);
+// Auth Context
+interface AuthContextType {
+  isLoggedIn: boolean;
+  currentRole: UserRole | null;
+  currentUserId: string | null;
+  currentUser: typeof mockUsers[0] | null;
+  login: (role: UserRole, userId: string) => void;
+  logout: () => void;
+}
 
-  const handleLogin = (role: UserRole, userId: string) => {
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
+}
+
+// Auth Provider Component
+function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return sessionStorage.getItem('isLoggedIn') === 'true';
+  });
+  const [currentRole, setCurrentRole] = useState<UserRole | null>(() => {
+    return sessionStorage.getItem('currentRole') as UserRole | null;
+  });
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
+    return sessionStorage.getItem('currentUserId');
+  });
+
+  const currentUser = mockUsers.find(u => u.id === currentUserId) || null;
+
+  const login = (role: UserRole, userId: string) => {
     setCurrentRole(role);
     setCurrentUserId(userId);
     setIsLoggedIn(true);
-    
-    // Route to appropriate initial page based on role
-    if (role === 'employee') {
-      setCurrentPage('verification');
-    } else {
-      setCurrentPage('dashboard');
-    }
+    sessionStorage.setItem('isLoggedIn', 'true');
+    sessionStorage.setItem('currentRole', role);
+    sessionStorage.setItem('currentUserId', userId);
   };
 
-  const handleLogout = () => {
+  const logout = () => {
     setIsLoggedIn(false);
     setCurrentRole(null);
     setCurrentUserId(null);
-    setCurrentPage('dashboard');
+    sessionStorage.removeItem('isLoggedIn');
+    sessionStorage.removeItem('currentRole');
+    sessionStorage.removeItem('currentUserId');
+  };
+
+  return (
+    <AuthContext.Provider value={{ isLoggedIn, currentRole, currentUserId, currentUser, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Protected Route Component
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: UserRole[] }) {
+  const { isLoggedIn, currentRole } = useAuth();
+  
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (allowedRoles && currentRole && !allowedRoles.includes(currentRole)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
+// Layout Component with Navigation
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const { currentRole, currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Map pathname to page ID for Navigation component
+  const getPageFromPath = (pathname: string): string => {
+    const pathMap: Record<string, string> = {
+      '/dashboard': 'dashboard',
+      '/campaigns': 'campaigns',
+      '/reports': 'reports',
+      '/verification-review': 'verification-review',
+      '/assets': 'assets',
+    };
+    return pathMap[pathname] || 'dashboard';
   };
 
   const handleNavigate = (page: string) => {
-    setCurrentPage(page);
+    const routeMap: Record<string, string> = {
+      'dashboard': '/dashboard',
+      'campaigns': '/campaigns',
+      'reports': '/reports',
+      'verification-review': '/verification-review',
+      'assets': '/assets',
+    };
+    navigate(routeMap[page] || '/dashboard');
   };
 
-  const currentUser = mockUsers.find(u => u.id === currentUserId);
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
-  // Login screen
-  if (!isLoggedIn || !currentRole || !currentUser) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
+  if (!currentRole || !currentUser) return null;
 
-  // Employee verification flow (no internal navigation)
-  if (currentRole === 'employee') {
-    return (
-      <EmployeeVerificationPage
-        onSubmit={() => {
-          alert('Thank you for completing your verification!');
-          handleLogout();
-        }}
-      />
-    );
-  }
-
-  // Specialized Equipment Managers (Network, Audio Video, Furniture)
-  if (currentRole === 'networkEquipment' || currentRole === 'audioVideo' || currentRole === 'furniture') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation
-          role={currentRole}
-          currentPage={currentPage}
-          onNavigate={handleNavigate}
-          onLogout={handleLogout}
-          userName={currentUser.name}
-        />
-
-        <div className="pt-16 pl-64">
-          {currentPage === 'dashboard' && (
-            <>
-              {currentRole === 'networkEquipment' && (
-                <NetworkEquipmentDashboard userId={currentUserId} />
-              )}
-              {currentRole === 'audioVideo' && (
-                <AudioVideoDashboard userId={currentUserId} />
-              )}
-              {currentRole === 'furniture' && (
-                <FurnitureDashboard userId={currentUserId} />
-              )}
-            </>
-          )}
-          {currentPage === 'reports' && (
-            <div className="p-8">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Power BI Reports</h1>
-              <p className="text-gray-600 mb-6">Access monthly and annual audit reports</p>
-              <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                <p className="text-gray-500">Power BI reports are integrated in the main dashboard view.</p>
-                <button
-                  onClick={() => handleNavigate('dashboard')}
-                  className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Go to Dashboard
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Finance and Asset Manager dashboards with navigation
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
         role={currentRole}
-        currentPage={currentPage}
+        currentPage={getPageFromPath(location.pathname)}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         userName={currentUser.name}
       />
-
-      {/* Main Content Area */}
       <div className="pt-16 pl-64">
-        {/* Finance User Pages */}
-        {currentRole === 'finance' && (
-          <>
-            {currentPage === 'dashboard' && (
-              <FinanceDashboard
-                onCreateCampaign={() => setShowCreateCampaign(true)}
-                onViewReports={() => alert('Reports page - Export functionality')}
-              />
-            )}
-            {currentPage === 'verification-review' && <VerificationReviewPage />}
-            {currentPage === 'campaigns' && (
-              <div className="p-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Campaign Management</h1>
-                <p className="text-gray-600">View and manage all verification campaigns</p>
-                <div className="mt-6">
-                  <button
-                    onClick={() => setShowCreateCampaign(true)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
-                  >
-                    Create New Campaign
-                  </button>
-                </div>
-              </div>
-            )}
-            {currentPage === 'reports' && (
-              <div className="p-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Audit Reports</h1>
-                <p className="text-gray-600">Generate and export compliance reports</p>
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
-                    <h3 className="font-semibold text-gray-900 mb-2">Asset Reconciliation Report</h3>
-                    <p className="text-sm text-gray-600">Compare SAP GL data with verified assets</p>
-                  </button>
-                  <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
-                    <h3 className="font-semibold text-gray-900 mb-2">Verification Status Report</h3>
-                    <p className="text-sm text-gray-600">Campaign completion and compliance rates</p>
-                  </button>
-                  <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
-                    <h3 className="font-semibold text-gray-900 mb-2">Exception Summary Report</h3>
-                    <p className="text-sm text-gray-600">All mismatches and missing devices</p>
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Asset Manager Pages */}
-        {currentRole === 'assetManager' && (
-          <>
-            {currentPage === 'dashboard' && (
-              <AssetManagerDashboard onAssignAsset={() => setShowAssignPeripherals(true)} />
-            )}
-            {currentPage === 'assets' && (
-              <AssetManagerDashboard onAssignAsset={() => setShowAssignPeripherals(true)} />
-            )}
-            {currentPage === 'verification-review' && <VerificationReviewPage />}
-          </>
-        )}
+        {children}
       </div>
+    </div>
+  );
+}
 
-      {/* Modals */}
+// Login Page Wrapper
+function LoginPageWrapper() {
+  const { isLoggedIn, currentRole, login } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isLoggedIn && currentRole) {
+      if (currentRole === 'employee') {
+        navigate('/verification');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [isLoggedIn, currentRole, navigate]);
+
+  const handleLogin = (role: UserRole, userId: string) => {
+    login(role, userId);
+    if (role === 'employee') {
+      navigate('/verification');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  return <LoginPage onLogin={handleLogin} />;
+}
+
+// Finance Dashboard Page
+function FinanceDashboardPage() {
+  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <FinanceDashboard
+        onCreateCampaign={() => setShowCreateCampaign(true)}
+        onViewReports={() => navigate('/reports')}
+      />
       {showCreateCampaign && (
         <CreateCampaignFlow
           onClose={() => setShowCreateCampaign(false)}
           onComplete={() => {
             setShowCreateCampaign(false);
-            alert('Campaign created successfully! Emails will be sent to all employees in the selected scope.');
+            navigate('/campaigns');
           }}
         />
       )}
+    </>
+  );
+}
 
+// Campaigns Page Wrapper
+function CampaignsPageWrapper() {
+  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  return (
+    <>
+      <CampaignsPage
+        key={refreshKey}
+        onCreateCampaign={() => setShowCreateCampaign(true)}
+      />
+      {showCreateCampaign && (
+        <CreateCampaignFlow
+          onClose={() => setShowCreateCampaign(false)}
+          onComplete={() => {
+            setShowCreateCampaign(false);
+            setRefreshKey(prev => prev + 1);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// Reports Page
+function ReportsPage() {
+  const navigate = useNavigate();
+  
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Audit Reports</h1>
+      <p className="text-gray-600">Generate and export compliance reports</p>
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+          <h3 className="font-semibold text-gray-900 mb-2">Asset Reconciliation Report</h3>
+          <p className="text-sm text-gray-600">Compare SAP GL data with verified assets</p>
+        </button>
+        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+          <h3 className="font-semibold text-gray-900 mb-2">Verification Status Report</h3>
+          <p className="text-sm text-gray-600">Campaign completion and compliance rates</p>
+        </button>
+        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+          <h3 className="font-semibold text-gray-900 mb-2">Exception Summary Report</h3>
+          <p className="text-sm text-gray-600">All mismatches and missing devices</p>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Asset Manager Dashboard Page
+function AssetManagerDashboardPage() {
+  const [showAssignPeripherals, setShowAssignPeripherals] = useState(false);
+
+  return (
+    <>
+      <AssetManagerDashboard onAssignAsset={() => setShowAssignPeripherals(true)} />
       {showAssignPeripherals && (
         <AssignPeripheralsFlow
           onClose={() => setShowAssignPeripherals(false)}
@@ -203,6 +255,163 @@ export default function App() {
           }}
         />
       )}
+    </>
+  );
+}
+
+// Equipment Manager Dashboard
+function EquipmentManagerDashboard() {
+  const { currentRole, currentUserId } = useAuth();
+  
+  return (
+    <>
+      {currentRole === 'networkEquipment' && (
+        <NetworkEquipmentDashboard userId={currentUserId || ''} />
+      )}
+      {currentRole === 'audioVideo' && (
+        <AudioVideoDashboard userId={currentUserId || ''} />
+      )}
+      {currentRole === 'furniture' && (
+        <FurnitureDashboard userId={currentUserId || ''} />
+      )}
+    </>
+  );
+}
+
+// Equipment Manager Reports Page
+function EquipmentReportsPage() {
+  const navigate = useNavigate();
+  
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Power BI Reports</h1>
+      <p className="text-gray-600 mb-6">Access monthly and annual audit reports</p>
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+        <p className="text-gray-500">Power BI reports are integrated in the main dashboard view.</p>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Go to Dashboard
+        </button>
+      </div>
     </div>
+  );
+}
+
+// Employee Verification Page Wrapper
+function EmployeeVerificationWrapper() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <EmployeeVerificationPage
+      onSubmit={() => {
+        alert('Thank you for completing your verification!');
+        logout();
+        navigate('/login');
+      }}
+    />
+  );
+}
+
+// Dynamic Dashboard based on role
+function DashboardRouter() {
+  const { currentRole } = useAuth();
+  
+  if (currentRole === 'finance') {
+    return <FinanceDashboardPage />;
+  }
+  if (currentRole === 'assetManager') {
+    return <AssetManagerDashboardPage />;
+  }
+  if (currentRole === 'networkEquipment' || currentRole === 'audioVideo' || currentRole === 'furniture') {
+    return <EquipmentManagerDashboard />;
+  }
+  
+  return <Navigate to="/login" replace />;
+}
+
+// Main App Component
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginPageWrapper />} />
+          
+          {/* Employee Verification (no navigation layout) */}
+          <Route
+            path="/verification"
+            element={
+              <ProtectedRoute allowedRoles={['employee']}>
+                <EmployeeVerificationWrapper />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Protected Routes with Navigation Layout */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <DashboardRouter />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/campaigns"
+            element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <AppLayout>
+                  <CampaignsPageWrapper />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute allowedRoles={['finance', 'networkEquipment', 'audioVideo', 'furniture']}>
+                <AppLayout>
+                  <ReportsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/verification-review"
+            element={
+              <ProtectedRoute allowedRoles={['finance', 'assetManager']}>
+                <AppLayout>
+                  <VerificationReviewPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/assets"
+            element={
+              <ProtectedRoute allowedRoles={['assetManager']}>
+                <AppLayout>
+                  <AssetManagerDashboardPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

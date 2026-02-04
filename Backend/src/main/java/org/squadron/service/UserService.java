@@ -27,6 +27,10 @@ public class UserService {
         return Optional.ofNullable(userRepository.findById(id));
     }
 
+    public java.util.List<User> findAll() {
+        return userRepository.listAll();
+    }
+
     public Optional<User> authenticate(String username, String password) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         if (userOpt.isPresent()) {

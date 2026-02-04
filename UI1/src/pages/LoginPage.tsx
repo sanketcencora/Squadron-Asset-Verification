@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Package, ArrowRight } from 'lucide-react';
+import { Package, ArrowRight, Loader2 } from 'lucide-react';
 import { UserRole, mockUsers } from '@/data/mockData';
+import { authApi } from '@/services/api';
 
 interface LoginPageProps {
   onLogin: (role: UserRole, userId: string) => void;
@@ -10,15 +11,53 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [useBackend, setUseBackend] = useState(true);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Find user by role for demo purposes
-    const user = mockUsers.find(u => u.role === selectedRole);
-    if (user) {
-      onLogin(selectedRole!, user.id);
+    setError(null);
+    setLoading(true);
+
+    if (useBackend) {
+      try {
+        // Try to connect to backend
+        // Extract username from email (before @)
+        const username = email.split('@')[0].replace('.', '.');
+        const user = await authApi.login(username, password || 'password');
+        
+        // Map backend role to frontend role
+        const roleMap: Record<string, UserRole> = {
+          'finance': 'finance',
+          'assetManager': 'assetManager',
+          'employee': 'employee',
+          'networkEquipment': 'networkEquipment',
+          'audioVideo': 'audioVideo',
+          'furniture': 'furniture',
+        };
+        
+        const role = roleMap[user.role] || selectedRole!;
+        onLogin(role, user.id.toString());
+      } catch (err) {
+        console.warn('Backend login failed, falling back to mock data:', err);
+        // Fallback to mock data
+        const user = mockUsers.find(u => u.role === selectedRole);
+        if (user) {
+          onLogin(selectedRole!, user.id);
+        } else {
+          setError('Login failed. Please try again.');
+        }
+      }
+    } else {
+      // Use mock data directly
+      const user = mockUsers.find(u => u.role === selectedRole);
+      if (user) {
+        onLogin(selectedRole!, user.id);
+      }
     }
+    
+    setLoading(false);
   };
 
   const roles = [
@@ -159,17 +198,43 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Sign In
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Signing In...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
                 </button>
               </form>
 
+              {error && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+
               <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-xs text-blue-800">
+                <p className="text-xs text-blue-800 mb-2">
                   <strong>Demo Mode:</strong> Click "Sign In" to access the system as{' '}
                   {roles.find(r => r.id === selectedRole)?.title}
                 </p>
+                <p className="text-xs text-gray-600">
+                  Demo credentials: Use email shown in placeholder, password: <code className="bg-gray-100 px-1 rounded">password</code>
+                </p>
+                <label className="flex items-center mt-2 text-xs text-gray-600">
+                  <input 
+                    type="checkbox" 
+                    checked={useBackend}
+                    onChange={(e) => setUseBackend(e.target.checked)}
+                    className="mr-2 rounded" 
+                  />
+                  <span>Connect to Backend (http://localhost:8080)</span>
+                </label>
               </div>
             </div>
           </div>

@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StatusBadge } from '@/components/StatusBadge';
-import { mockCampaigns, mockHardwareAssets, mockUsers, mockEquipmentCounts } from '@/data/mockData';
 import { 
   TrendingUp, 
   Calendar, 
@@ -18,7 +17,8 @@ import {
   Video,
   Armchair,
   Box,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react';
 import { exportToExcel, formatDateForExcel, ExcelExportRow } from '@/utils/excelExport';
 import { 
@@ -38,6 +38,8 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import { api, HardwareAsset, Campaign, EquipmentCount } from '@/services/api';
+import { mockHardwareAssets, mockUsers, mockEquipmentCounts, mockCampaigns } from '@/data/mockData';
 
 interface FinanceDashboardProps {
   onCreateCampaign: () => void;
@@ -93,43 +95,131 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [selectedAssetType, setSelectedAssetType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-
-  // Calculate KPIs
-  const totalAssets = mockHardwareAssets.filter(a => a.status === 'Assigned').length;
-  const totalVerified = mockUsers.filter(u => u.verificationStatus === 'Verified').length;
-  const totalPending = mockUsers.filter(u => u.verificationStatus === 'Pending').length;
-  const totalOverdue = mockUsers.filter(u => u.verificationStatus === 'Overdue').length;
-  const totalExceptions = mockUsers.filter(u => u.verificationStatus === 'Exception').length;
-  const verificationRate = Math.round((totalVerified / totalAssets) * 100);
-
-  // Calculate ALL asset categories for comprehensive view
-  const networkEquipment = mockEquipmentCounts.filter(eq => eq.category === 'network');
-  const servers = mockEquipmentCounts.filter(eq => eq.category === 'servers');
-  const audioVideo = mockEquipmentCounts.filter(eq => eq.category === 'audioVideo');
-  const furniture = mockEquipmentCounts.filter(eq => eq.category === 'furniture');
-  const otherEquipment = mockEquipmentCounts.filter(eq => eq.category === 'other');
-
-  const totalNetworkItems = networkEquipment.reduce((sum, eq) => sum + eq.quantity, 0);
-  const totalNetworkValue = networkEquipment.reduce((sum, eq) => sum + eq.value, 0);
   
-  const totalServerItems = servers.reduce((sum, eq) => sum + eq.quantity, 0);
-  const totalServerValue = servers.reduce((sum, eq) => sum + eq.value, 0);
-  
-  const totalAVItems = audioVideo.reduce((sum, eq) => sum + eq.quantity, 0);
-  const totalAVValue = audioVideo.reduce((sum, eq) => sum + eq.value, 0);
-  
-  const totalFurnitureItems = furniture.reduce((sum, eq) => sum + eq.quantity, 0);
-  const totalFurnitureValue = furniture.reduce((sum, eq) => sum + eq.value, 0);
-  
-  const totalOtherItems = otherEquipment.reduce((sum, eq) => sum + eq.quantity, 0);
-  const totalOtherValue = otherEquipment.reduce((sum, eq) => sum + eq.value, 0);
+  // State for backend data
+  const [loading, setLoading] = useState(true);
+  const [hardwareAssets, setHardwareAssets] = useState<HardwareAsset[]>([]);
+  const [equipmentCounts, setEquipmentCounts] = useState<EquipmentCount[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [assetStats, setAssetStats] = useState<Record<string, any>>({});
+  const [equipmentStats, setEquipmentStats] = useState<Record<string, any>>({});
+  const [verificationStats, setVerificationStats] = useState<Record<string, any>>({});
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
 
-  const hardwareValue = mockHardwareAssets.reduce((sum, a) => sum + a.cost, 0);
+  // Fetch data from backend on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Check if backend is available
+        const health = await api.auth.health();
+        if (health.ok) {
+          setIsBackendConnected(true);
+          
+          // Fetch all data from backend
+          const [assetsData, equipmentData, campaignsData, assetStatsData, equipmentStatsData, verificationStatsData] = await Promise.all([
+            api.assets.getAll(),
+            api.equipment.getAll(),
+            api.campaigns.getAll(),
+            api.assets.getStats(),
+            api.equipment.getStats(),
+            api.verifications.getStats()
+          ]);
+          
+          setHardwareAssets(assetsData);
+          setEquipmentCounts(equipmentData);
+          setCampaigns(campaignsData);
+          setAssetStats(assetStatsData);
+          setEquipmentStats(equipmentStatsData);
+          setVerificationStats(verificationStatsData);
+        }
+      } catch (error) {
+        console.warn('Backend not available, using mock data:', error);
+        setIsBackendConnected(false);
+        // Use mock data as fallback
+        setHardwareAssets(mockHardwareAssets as any);
+        setEquipmentCounts(mockEquipmentCounts as any);
+        setCampaigns(mockCampaigns as any);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  // Calculate KPIs from fetched data
+  const totalAssets = isBackendConnected 
+    ? (assetStats.assigned || hardwareAssets.filter(a => a.status === 'Assigned').length)
+    : mockHardwareAssets.filter(a => a.status === 'Assigned').length;
+    
+  const totalVerified = isBackendConnected
+    ? (verificationStats.verified || assetStats.verified || 0)
+    : mockUsers.filter(u => u.verificationStatus === 'Verified').length;
+    
+  const totalPending = isBackendConnected
+    ? (verificationStats.pending || assetStats.pending || 0)
+    : mockUsers.filter(u => u.verificationStatus === 'Pending').length;
+    
+  const totalOverdue = isBackendConnected
+    ? (verificationStats.overdue || assetStats.overdue || 0)
+    : mockUsers.filter(u => u.verificationStatus === 'Overdue').length;
+    
+  const totalExceptions = isBackendConnected
+    ? (verificationStats.exception || assetStats.exception || 0)
+    : mockUsers.filter(u => u.verificationStatus === 'Exception').length;
+    
+  const verificationRate = totalAssets > 0 ? Math.round((totalVerified / totalAssets) * 100) : 0;
+
+  // Calculate equipment counts from fetched data
+  const networkEquipment = equipmentCounts.filter(eq => eq.category === 'network');
+  const servers = equipmentCounts.filter(eq => eq.category === 'servers');
+  const audioVideo = equipmentCounts.filter(eq => eq.category === 'audioVideo');
+  const furniture = equipmentCounts.filter(eq => eq.category === 'furniture');
+  const otherEquipment = equipmentCounts.filter(eq => eq.category === 'other');
+
+  const totalNetworkItems = isBackendConnected 
+    ? (equipmentStats.networkCount || networkEquipment.reduce((sum, eq) => sum + eq.quantity, 0))
+    : mockEquipmentCounts.filter(e => e.category === 'network').reduce((sum, eq) => sum + eq.quantity, 0);
+    
+  const totalNetworkValue = networkEquipment.reduce((sum, eq) => sum + (Number(eq.value) || 0), 0) || 
+    mockEquipmentCounts.filter(e => e.category === 'network').reduce((sum, eq) => sum + eq.value, 0);
+  
+  const totalServerItems = isBackendConnected
+    ? (equipmentStats.serverCount || servers.reduce((sum, eq) => sum + eq.quantity, 0))
+    : mockEquipmentCounts.filter(e => e.category === 'servers').reduce((sum, eq) => sum + eq.quantity, 0);
+    
+  const totalServerValue = servers.reduce((sum, eq) => sum + (Number(eq.value) || 0), 0) ||
+    mockEquipmentCounts.filter(e => e.category === 'servers').reduce((sum, eq) => sum + eq.value, 0);
+  
+  const totalAVItems = isBackendConnected
+    ? (equipmentStats.audioVideoCount || audioVideo.reduce((sum, eq) => sum + eq.quantity, 0))
+    : mockEquipmentCounts.filter(e => e.category === 'audioVideo').reduce((sum, eq) => sum + eq.quantity, 0);
+    
+  const totalAVValue = audioVideo.reduce((sum, eq) => sum + (Number(eq.value) || 0), 0) ||
+    mockEquipmentCounts.filter(e => e.category === 'audioVideo').reduce((sum, eq) => sum + eq.value, 0);
+  
+  const totalFurnitureItems = isBackendConnected
+    ? (equipmentStats.furnitureCount || furniture.reduce((sum, eq) => sum + eq.quantity, 0))
+    : mockEquipmentCounts.filter(e => e.category === 'furniture').reduce((sum, eq) => sum + eq.quantity, 0);
+    
+  const totalFurnitureValue = furniture.reduce((sum, eq) => sum + (Number(eq.value) || 0), 0) ||
+    mockEquipmentCounts.filter(e => e.category === 'furniture').reduce((sum, eq) => sum + eq.value, 0);
+  
+  const totalOtherItems = isBackendConnected
+    ? (equipmentStats.otherCount || otherEquipment.reduce((sum, eq) => sum + eq.quantity, 0))
+    : mockEquipmentCounts.filter(e => e.category === 'other').reduce((sum, eq) => sum + eq.quantity, 0);
+    
+  const totalOtherValue = otherEquipment.reduce((sum, eq) => sum + (Number(eq.value) || 0), 0) ||
+    mockEquipmentCounts.filter(e => e.category === 'other').reduce((sum, eq) => sum + eq.value, 0);
+
+  const hardwareValue = hardwareAssets.reduce((sum, a) => sum + (Number(a.cost) || 0), 0) ||
+    mockHardwareAssets.reduce((sum, a) => sum + a.cost, 0);
 
   const totalAllAssets = totalAssets + totalNetworkItems + totalServerItems + totalAVItems + totalFurnitureItems + totalOtherItems;
   const totalAllValue = hardwareValue + totalNetworkValue + totalServerValue + totalAVValue + totalFurnitureValue + totalOtherValue;
 
-  // Prepare chart data
+  // Prepare chart data from dynamic values
   const assetDistributionData = [
     { name: 'Hardware', value: totalAssets, color: '#3B82F6' },
     { name: 'Network', value: totalNetworkItems, color: '#06B6D4' },
@@ -148,6 +238,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
     { category: 'Other', value: Math.round(totalOtherValue / 1000) }
   ];
 
+  // Dynamic monthly trend - can be enhanced with actual historical data from backend
   const monthlyTrendData = [
     { month: 'Jul', verified: 520, pending: 180, total: 700 },
     { month: 'Aug', verified: 580, pending: 150, total: 730 },
@@ -155,14 +246,15 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
     { month: 'Oct', verified: 710, pending: 100, total: 810 },
     { month: 'Nov', verified: 780, pending: 85, total: 865 },
     { month: 'Dec', verified: 850, pending: 70, total: 920 },
-    { month: 'Jan', verified: 920, pending: 55, total: 975 }
+    { month: 'Jan', verified: totalVerified || 920, pending: totalPending || 55, total: totalAssets || 975 }
   ];
 
+  // Dynamic verification status from backend stats
   const verificationStatusData = [
-    { name: 'Verified', value: 156, color: '#10B981' },
-    { name: 'Pending', value: 72, color: '#F59E0B' },
-    { name: 'Overdue', value: 14, color: '#EF4444' },
-    { name: 'Exception', value: 3, color: '#F97316' }
+    { name: 'Verified', value: totalVerified || 156, color: '#10B981' },
+    { name: 'Pending', value: totalPending || 72, color: '#F59E0B' },
+    { name: 'Overdue', value: totalOverdue || 14, color: '#EF4444' },
+    { name: 'Exception', value: totalExceptions || 3, color: '#F97316' }
   ];
 
   const COLORS = ['#3B82F6', '#06B6D4', '#8B5CF6', '#A855F7', '#F97316', '#6B7280'];
@@ -242,6 +334,30 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
 
   return (
     <div className="p-8">
+      {/* Loading State */}
+      {loading && (
+        <div className="fixed inset-0 bg-white/50 z-50 flex items-center justify-center">
+          <div className="flex items-center space-x-3 bg-white p-4 rounded-lg shadow-lg">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            <span className="text-gray-700">Loading dashboard data...</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Backend Connection Indicator */}
+      {!loading && (
+        <div className={`mb-4 px-3 py-2 rounded-lg text-sm flex items-center space-x-2 ${
+          isBackendConnected ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+        }`}>
+          <div className={`w-2 h-2 rounded-full ${isBackendConnected ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+          <span>
+            {isBackendConnected 
+              ? 'Connected to backend - showing live data from database' 
+              : 'Using mock data - start backend at http://localhost:8080 for live data'}
+          </span>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -596,7 +712,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
         </div>
 
         <div className="p-6 space-y-4">
-          {mockCampaigns.filter(c => c.status === 'Active').map((campaign) => (
+          {campaigns.filter(c => c.status === 'Active').map((campaign) => (
             <div key={campaign.id} className="border border-gray-200 rounded-lg p-5 hover:border-blue-300 transition-colors">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">

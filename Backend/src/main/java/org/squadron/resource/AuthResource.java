@@ -111,4 +111,28 @@ public class AuthResource {
         NewCookie clear = NewCookie.valueOf("sid=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax");
         return Response.ok(Map.of("message","Logged out")).cookie(clear).build();
     }
+
+    @GET
+    @Path("/debug/users")
+    public Response debugUsers() {
+        // For debugging only - list all users
+        var users = userService.findAll();
+        return Response.ok(users).build();
+    }
+
+    @GET
+    @Path("/debug/check-user/{username}")
+    public Response debugCheckUser(@PathParam("username") String username) {
+        var user = userService.findByUsername(username);
+        if (user.isPresent()) {
+            return Response.ok(Map.of(
+                "found", true,
+                "username", user.get().username,
+                "email", user.get().email,
+                "role", user.get().role,
+                "hasPassword", user.get().password != null && !user.get().password.isEmpty()
+            )).build();
+        }
+        return Response.ok(Map.of("found", false)).build();
+    }
 }
