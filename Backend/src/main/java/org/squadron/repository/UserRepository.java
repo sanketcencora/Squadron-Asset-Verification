@@ -15,4 +15,12 @@ public class UserRepository implements PanacheRepository<User> {
     public Optional<User> findByRole(String role) {
         return find("role", role).firstResultOptional();
     }
+    
+    public Optional<User> findByEmail(String email) {
+        return find("email", email).firstResultOptional();
+    }
+    
+    public User findByEmployeeId(String employeeId) {
+        return find("employeeId", employeeId).firstResult();
+    }
 }

@@ -113,10 +113,10 @@ export function Navigation({ role, currentPage, onNavigate, onLogout, userName }
 
         {/* Bottom Section */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 space-y-1">
-          <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+          {/* <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Settings className="w-5 h-5" />
             <span>Settings</span>
-          </button>
+          </button> */}
           <button
             onClick={onLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"

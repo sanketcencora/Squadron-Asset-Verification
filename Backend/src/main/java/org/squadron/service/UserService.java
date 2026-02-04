@@ -32,7 +32,14 @@ public class UserService {
     }
 
     public Optional<User> authenticate(String username, String password) {
+        // Try to find by username first
         Optional<User> userOpt = userRepository.findByUsername(username);
+        
+        // If not found by username, try email
+        if (userOpt.isEmpty()) {
+            userOpt = userRepository.findByEmail(username);
+        }
+        
         if (userOpt.isPresent()) {
             User u = userOpt.get();
             if (u.password != null && BCrypt.checkpw(password, u.password)) {

@@ -13,6 +13,7 @@ import { FurnitureDashboard } from '@/pages/FurnitureDashboard';
 import { CampaignsPage } from '@/pages/CampaignsPage';
 import { Navigation } from '@/components/Navigation';
 import { UserRole, mockUsers } from '@/data/mockData';
+import { api } from '@/services/api';
 
 // Auth Context
 interface AuthContextType {
@@ -43,8 +44,25 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
     return sessionStorage.getItem('currentUserId');
   });
+  const [currentUserName, setCurrentUserName] = useState<string | null>(() => {
+    return sessionStorage.getItem('currentUserName');
+  });
 
-  const currentUser = mockUsers.find(u => u.id === currentUserId) || null;
+  // Try to find user from mock data, or create a minimal user object from stored data
+  const currentUser = mockUsers.find(u => u.id === currentUserId) || 
+    (currentUserId && currentRole && currentUserName ? {
+      id: currentUserId,
+      name: currentUserName,
+      email: sessionStorage.getItem('currentUserEmail') || '',
+      role: currentRole,
+      department: sessionStorage.getItem('currentUserDepartment') || '',
+      verificationStatus: 'Pending' as const,
+      location: 'Pune',
+      team: sessionStorage.getItem('currentUserDepartment') || '',
+      employeeId: currentUserId,
+      lastVerifiedDate: null,
+      assignedAssets: []
+    } : null);
 
   const login = (role: UserRole, userId: string) => {
     setCurrentRole(role);
@@ -59,9 +77,13 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoggedIn(false);
     setCurrentRole(null);
     setCurrentUserId(null);
+    setCurrentUserName(null);
     sessionStorage.removeItem('isLoggedIn');
     sessionStorage.removeItem('currentRole');
     sessionStorage.removeItem('currentUserId');
+    sessionStorage.removeItem('currentUserName');
+    sessionStorage.removeItem('currentUserEmail');
+    sessionStorage.removeItem('currentUserDepartment');
   };
 
   return (
@@ -216,21 +238,192 @@ function CampaignsPageWrapper() {
 // Reports Page
 function ReportsPage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const downloadCSV = (data: any[], filename: string) => {
+    // Convert data to CSV
+    if (data.length === 0) {
+      alert('No data available to export');
+      return;
+    }
+
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => 
+        headers.map(header => {
+          const value = row[header];
+          // Escape quotes and wrap in quotes if contains comma
+          const stringValue = value?.toString() || '';
+          return stringValue.includes(',') || stringValue.includes('"') 
+            ? `"${stringValue.replace(/"/g, '""')}"` 
+            : stringValue;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleAssetReconciliation = async () => {
+    setLoading(true);
+    try {
+      // Fetch assets from backend
+      const assets = await api.assets.getAll();
+      
+      // Format data for reconciliation report
+      const reportData = assets.map(asset => ({
+        'Service Tag': asset.serviceTag,
+        'Asset Type': asset.assetType,
+        'Model': asset.model,
+        'Invoice Number': asset.invoiceNumber,
+        'PO Number': asset.poNumber,
+        'Cost': asset.cost,
+        'Purchase Date': asset.purchaseDate,
+        'Assigned To': asset.assignedToName || 'Unassigned',
+        'Employee ID': asset.assignedTo || 'N/A',
+        'Status': asset.status,
+        'Verification Status': asset.verificationStatus,
+        'Last Verified': asset.lastVerifiedDate || 'Never',
+        'Location': asset.location || 'N/A',
+        'Team': asset.team || 'N/A',
+        'High Value': asset.isHighValue ? 'Yes' : 'No'
+      }));
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      downloadCSV(reportData, `Asset_Reconciliation_Report_${timestamp}.csv`);
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      alert('Failed to generate report. Please ensure the backend is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerificationStatus = async () => {
+    setLoading(true);
+    try {
+      // Fetch verification records and campaigns
+      const [verifications, campaigns, stats] = await Promise.all([
+        api.verifications.getAll(),
+        api.campaigns.getAll(),
+        api.verifications.getStats()
+      ]);
+
+      // Format data for verification status report
+      const reportData = verifications.map(record => ({
+        'Employee ID': record.employeeId,
+        'Employee Name': record.employeeName,
+        'Service Tag': record.serviceTag,
+        'Asset Type': record.assetType,
+        'Status': record.status,
+        'Submitted Date': record.submittedDate || 'Not Submitted',
+        'Recorded Service Tag': record.recordedServiceTag || 'N/A',
+        'Reviewed By': record.reviewedBy || 'N/A',
+        'Exception Type': record.exceptionType || 'N/A',
+        'Comment': record.comment || 'N/A'
+      }));
+
+      // Add summary row
+      reportData.unshift({
+        'Employee ID': 'SUMMARY',
+        'Employee Name': `Total: ${stats.total || 0}, Verified: ${stats.verified || 0}, Pending: ${stats.pending || 0}, Overdue: ${stats.overdue || 0}`,
+        'Service Tag': '',
+        'Asset Type': '',
+        'Status': '',
+        'Submitted Date': '',
+        'Recorded Service Tag': '',
+        'Reviewed By': '',
+        'Exception Type': '',
+        'Comment': ''
+      });
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      downloadCSV(reportData, `Verification_Status_Report_${timestamp}.csv`);
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      alert('Failed to generate report. Please ensure the backend is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExceptionSummary = async () => {
+    setLoading(true);
+    try {
+      // Fetch exceptions from verification records
+      const verifications = await api.verifications.getExceptions();
+
+      // Format data for exception summary report
+      const reportData = verifications.map(record => ({
+        'Employee ID': record.employeeId,
+        'Employee Name': record.employeeName,
+        'Service Tag': record.serviceTag,
+        'Asset Type': record.assetType,
+        'Exception Type': record.exceptionType || 'Unknown',
+        'Recorded Service Tag': record.recordedServiceTag || 'N/A',
+        'Status': record.status,
+        'Submitted Date': record.submittedDate || 'N/A',
+        'Reviewed By': record.reviewedBy || 'Pending Review',
+        'Comment': record.comment || 'No comment',
+        'Image Uploaded': record.uploadedImage ? 'Yes' : 'No'
+      }));
+
+      if (reportData.length === 0) {
+        alert('No exceptions found to export');
+        return;
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      downloadCSV(reportData, `Exception_Summary_Report_${timestamp}.csv`);
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      alert('Failed to generate report. Please ensure the backend is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-4">Audit Reports</h1>
       <p className="text-gray-600">Generate and export compliance reports</p>
+      {loading && (
+        <div className="mt-4 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg">
+          Generating report...
+        </div>
+      )}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+        <button 
+          onClick={handleAssetReconciliation}
+          disabled={loading}
+          className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <h3 className="font-semibold text-gray-900 mb-2">Asset Reconciliation Report</h3>
           <p className="text-sm text-gray-600">Compare SAP GL data with verified assets</p>
         </button>
-        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+        <button 
+          onClick={handleVerificationStatus}
+          disabled={loading}
+          className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <h3 className="font-semibold text-gray-900 mb-2">Verification Status Report</h3>
           <p className="text-sm text-gray-600">Campaign completion and compliance rates</p>
         </button>
-        <button className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left">
+        <button 
+          onClick={handleExceptionSummary}
+          disabled={loading}
+          className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <h3 className="font-semibold text-gray-900 mb-2">Exception Summary Report</h3>
           <p className="text-sm text-gray-600">All mismatches and missing devices</p>
         </button>

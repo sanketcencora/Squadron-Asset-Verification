@@ -50,6 +50,14 @@ public class AuthResource {
         }
 
         User user = opt.get();
+        
+        // Restrict login to finance users only
+        if (!"finance".equals(user.role)) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(Map.of("message", "Access restricted. Only finance users are allowed to login."))
+                .build();
+        }
+        
         String sid = sessionService.createSession(user.id);
 
         NewCookie cookie = NewCookie.valueOf("sid=" + sid + "; Path=/; HttpOnly; SameSite=Lax");

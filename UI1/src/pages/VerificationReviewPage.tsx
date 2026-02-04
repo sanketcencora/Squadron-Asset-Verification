@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StatusBadge } from '@/components/StatusBadge';
-import { mockVerificationRecords, VerificationRecord } from '@/data/mockData';
+import { api, VerificationRecord } from '@/services/api';
 import {
   Search,
   Filter,
@@ -14,15 +14,94 @@ import {
   Calendar,
   MessageSquare,
   ZoomIn,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 
 export function VerificationReviewPage() {
   const [selectedRecord, setSelectedRecord] = useState<VerificationRecord | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [records, setRecords] = useState<VerificationRecord[]>([]);
+  const [stats, setStats] = useState<Record<string, number>>({ total: 0, verified: 0, pending: 0, overdue: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredRecords = mockVerificationRecords.filter(record => {
+  useEffect(() => {
+    fetchVerifications();
+  }, []);
+
+  const fetchVerifications = async () => {
+    setLoading(true);
+    try {
+      const [recordsData, statsData] = await Promise.all([
+        api.verifications.getAll(),
+        api.verifications.getStats()
+      ]);
+      setRecords(recordsData);
+      setStats(statsData);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch verifications:', err);
+      setError('Failed to load verification records');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportReviewLog = () => {
+    if (records.length === 0) {
+      alert('No verification records to export');
+      return;
+    }
+
+    // Prepare data for CSV export
+    const exportData = records.map(record => ({
+      'Employee ID': record.employeeId,
+      'Employee Name': record.employeeName,
+      'Service Tag': record.serviceTag,
+      'Asset Type': record.assetType,
+      'Status': record.status,
+      'Submitted Date': record.submittedDate || 'Not Submitted',
+      'Recorded Service Tag': record.recordedServiceTag || 'N/A',
+      'Exception Type': record.exceptionType || 'None',
+      'Reviewed By': record.reviewedBy || 'Pending',
+      'Comment': record.comment || 'No comment',
+      'Has Image': record.uploadedImage ? 'Yes' : 'No',
+      'Peripherals Confirmed': record.peripheralsConfirmedJson || 'N/A',
+      'Peripherals Not With Me': record.peripheralsNotWithMeJson || 'N/A'
+    }));
+
+    // Convert to CSV
+    const headers = Object.keys(exportData[0]);
+    const csvContent = [
+      headers.join(','),
+      ...exportData.map(row => 
+        headers.map(header => {
+          const value = row[header as keyof typeof row];
+          const stringValue = value?.toString() || '';
+          // Escape quotes and wrap in quotes if contains comma
+          return stringValue.includes(',') || stringValue.includes('"') 
+            ? `"${stringValue.replace(/"/g, '""')}"` 
+            : stringValue;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().split('T')[0];
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Verification_Review_Log_${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const filteredRecords = records.filter(record => {
     const matchesSearch = 
       record.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -63,7 +142,19 @@ export function VerificationReviewPage() {
             <p className="text-gray-600 mt-1">Review and approve employee asset verifications</p>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
+            <button 
+              onClick={fetchVerifications}
+              disabled={loading}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+            <button 
+              onClick={handleExportReviewLog}
+              disabled={loading || records.length === 0}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <Download className="w-4 h-4" />
               <span>Export Review Log</span>
             </button>
@@ -71,44 +162,57 @@ export function VerificationReviewPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Total Submissions</p>
-            <Package className="w-5 h-5 text-blue-600" />
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center space-x-3">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            <span className="text-gray-600">Loading verification records...</span>
           </div>
-          <p className="text-3xl font-semibold text-gray-900">{mockVerificationRecords.length}</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Verified</p>
-            <CheckCircle className="w-5 h-5 text-green-600" />
-          </div>
-          <p className="text-3xl font-semibold text-gray-900">
-            {mockVerificationRecords.filter(r => r.status === 'Verified').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Pending Review</p>
-            <AlertTriangle className="w-5 h-5 text-yellow-600" />
-          </div>
-          <p className="text-3xl font-semibold text-gray-900">
-            {mockVerificationRecords.filter(r => r.status === 'Pending').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Exceptions</p>
-            <XCircle className="w-5 h-5 text-red-600" />
-          </div>
-          <p className="text-3xl font-semibold text-gray-900">
-            {mockVerificationRecords.filter(r => r.status === 'Exception').length}
-          </p>
-        </div>
-      </div>
+      )}
 
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-2">
+            <XCircle className="w-5 h-5 text-red-600" />
+            <span className="text-red-800">{error}</span>
+            <button onClick={fetchVerifications} className="ml-auto px-3 py-1 bg-red-600 text-white rounded text-sm">
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Cards - Removed Exceptions */}
+      {!loading && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Total Submissions</p>
+              <Package className="w-5 h-5 text-blue-600" />
+            </div>
+            <p className="text-3xl font-semibold text-gray-900">{stats.total || 0}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Verified</p>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            </div>
+            <p className="text-3xl font-semibold text-gray-900">{stats.verified || 0}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-600">Pending Review</p>
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            </div>
+            <p className="text-3xl font-semibold text-gray-900">{stats.pending || 0}</p>
+          </div>
+        </div>
+      )}
+
+      {!loading && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* List View */}
         <div className="bg-white rounded-lg border border-gray-200">
@@ -138,7 +242,6 @@ export function VerificationReviewPage() {
                   <option value="all">All Status</option>
                   <option value="Verified">Verified</option>
                   <option value="Pending">Pending</option>
-                  <option value="Exception">Exception</option>
                   <option value="Overdue">Overdue</option>
                 </select>
               </div>
@@ -426,6 +529,7 @@ export function VerificationReviewPage() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

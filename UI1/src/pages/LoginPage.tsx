@@ -20,44 +20,43 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setError(null);
     setLoading(true);
 
-    if (useBackend) {
-      try {
-        // Try to connect to backend
-        // Extract username from email (before @)
-        const username = email.split('@')[0].replace('.', '.');
-        const user = await authApi.login(username, password || 'password');
-        
-        // Map backend role to frontend role
-        const roleMap: Record<string, UserRole> = {
-          'finance': 'finance',
-          'assetManager': 'assetManager',
-          'employee': 'employee',
-          'networkEquipment': 'networkEquipment',
-          'audioVideo': 'audioVideo',
-          'furniture': 'furniture',
-        };
-        
-        const role = roleMap[user.role] || selectedRole!;
-        onLogin(role, user.id.toString());
-      } catch (err) {
-        console.warn('Backend login failed, falling back to mock data:', err);
-        // Fallback to mock data
-        const user = mockUsers.find(u => u.role === selectedRole);
-        if (user) {
-          onLogin(selectedRole!, user.id);
-        } else {
-          setError('Login failed. Please try again.');
-        }
-      }
-    } else {
-      // Use mock data directly
-      const user = mockUsers.find(u => u.role === selectedRole);
-      if (user) {
-        onLogin(selectedRole!, user.id);
+    try {
+      // Try to connect to backend - no fallback allowed
+      // Extract username from email (before @)
+      const username = email.split('@')[0].replace('.', '.');
+      const user = await authApi.login(username, password || 'password');
+      
+      // Store user details in sessionStorage for Navigation
+      sessionStorage.setItem('currentUserName', user.name);
+      sessionStorage.setItem('currentUserEmail', user.email);
+      sessionStorage.setItem('currentUserDepartment', user.department);
+      
+      // Map backend role to frontend role
+      const roleMap: Record<string, UserRole> = {
+        'finance': 'finance',
+        'assetManager': 'assetManager',
+        'employee': 'employee',
+        'networkEquipment': 'networkEquipment',
+        'audioVideo': 'audioVideo',
+        'furniture': 'furniture',
+      };
+      
+      const role = roleMap[user.role] || selectedRole!;
+      onLogin(role, user.id.toString());
+      setLoading(false);
+    } catch (err: any) {
+      console.error('Backend login failed:', err);
+      setLoading(false);
+      
+      // Show appropriate error message
+      if (err.message.includes('Access restricted')) {
+        setError('Access restricted. Only finance users are allowed to login.');
+      } else if (err.message.includes('Invalid credentials')) {
+        setError('Invalid email or password. Please try again.');
+      } else {
+        setError('Login failed. Please ensure the backend server is running.');
       }
     }
-    
-    setLoading(false);
   };
 
   const roles = [
@@ -218,7 +217,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 </div>
               )}
 
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              {/* <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-xs text-blue-800 mb-2">
                   <strong>Demo Mode:</strong> Click "Sign In" to access the system as{' '}
                   {roles.find(r => r.id === selectedRole)?.title}
@@ -235,14 +234,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   />
                   <span>Connect to Backend (http://localhost:8080)</span>
                 </label>
-              </div>
+              </div> */}
             </div>
           </div>
         )}
-
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Secure SSO Login • Enterprise Audit Compliant • ISO 27001 Certified</p>
-        </div>
       </div>
     </div>
   );
