@@ -48,9 +48,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     return sessionStorage.getItem('currentUserName');
   });
 
-  // Try to find user from mock data, or create a minimal user object from stored data
-  const currentUser = mockUsers.find(u => u.id === currentUserId) || 
-    (currentUserId && currentRole && currentUserName ? {
+  // Prioritize sessionStorage data over mockUsers (backend users take precedence)
+  const currentUser = (currentUserId && currentRole && currentUserName ? {
       id: currentUserId,
       name: currentUserName,
       email: sessionStorage.getItem('currentUserEmail') || '',
@@ -62,11 +61,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       employeeId: currentUserId,
       lastVerifiedDate: null,
       assignedAssets: []
-    } : null);
+    } : null) || mockUsers.find(u => u.id === currentUserId);
 
   const login = (role: UserRole, userId: string) => {
     setCurrentRole(role);
     setCurrentUserId(userId);
+    setCurrentUserName(sessionStorage.getItem('currentUserName')); // Update from sessionStorage
     setIsLoggedIn(true);
     sessionStorage.setItem('isLoggedIn', 'true');
     sessionStorage.setItem('currentRole', role);

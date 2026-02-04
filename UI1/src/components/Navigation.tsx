@@ -1,5 +1,5 @@
 import { UserRole } from '@/data/mockData';
-import { LayoutDashboard, FileText, Settings, LogOut, Search, Bell } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, LogOut, Search, Bell, Package } from 'lucide-react';
 import { ConnectionStatus } from './ConnectionStatus';
 import { Logo } from './Logo';
 

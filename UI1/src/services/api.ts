@@ -1,6 +1,6 @@
 // API Configuration and Base Service
-// Allow override via Vite env; default to backend dev port 8081
-export const API_BASE_URL = (import.meta as any)?.env?.VITE_API_BASE_URL || 'http://localhost:8081/api';
+// Allow override via Vite env; default to backend dev port 8080
+export const API_BASE_URL = (import.meta as any)?.env?.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // Generic fetch wrapper with error handling
 async function fetchApi<T>(

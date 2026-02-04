@@ -23,8 +23,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     try {
       // Try to connect to backend - no fallback allowed
       // Extract username from email (before @)
-      const username = email.split('@')[0].replace('.', '.');
-      const user = await authApi.login(username, password || 'password');
+      const username = email.split('@')[0];
+      const loginPassword = password || 'password';
+      
+      console.log('Attempting login with username:', username);
+      
+      const user = await authApi.login(username, loginPassword);
+      
+      console.log('Login successful, user:', user);
       
       // Store user details in sessionStorage for Navigation
       sessionStorage.setItem('currentUserName', user.name);
@@ -49,12 +55,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       setLoading(false);
       
       // Show appropriate error message
-      if (err.message.includes('Access restricted')) {
+      if (err.message && err.message.includes('Access restricted')) {
         setError('Access restricted. Only finance users are allowed to login.');
-      } else if (err.message.includes('Invalid credentials')) {
+      } else if (err.message && err.message.includes('Invalid credentials')) {
         setError('Invalid email or password. Please try again.');
+      } else if (err.message && err.message.includes('Failed to fetch')) {
+        setError('Cannot connect to backend server. Please ensure it is running on http://localhost:8080');
       } else {
-        setError('Login failed. Please ensure the backend server is running.');
+        setError(`Login failed: ${err.message || 'Unknown error'}`);
       }
     }
   };
