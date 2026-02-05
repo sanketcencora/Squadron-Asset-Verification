@@ -12,6 +12,7 @@ import org.squadron.service.EquipmentService;
 import org.squadron.model.*;
 import org.squadron.model.HardwareAsset.AssetType;
 import org.squadron.model.HardwareAsset.AssetStatus;
+import org.squadron.model.Peripheral.PeripheralStatus;
 import org.squadron.model.Peripheral.PeripheralType;
 import org.squadron.model.Campaign.CampaignStatus;
 import org.squadron.model.EquipmentCount.EquipmentCategory;
@@ -64,6 +65,21 @@ public class Bootstrap {
         } catch (Exception e) {
             // Table might not exist yet or columns already correct - ignore
             System.out.println("[Bootstrap] Column fix skipped: " + e.getMessage());
+        }
+        
+        // Make columns nullable for peripherals (required for instock peripherals)
+        try {
+            entityManager.createNativeQuery("ALTER TABLE peripherals MODIFY COLUMN assignedTo VARCHAR(255) NULL").executeUpdate();
+            entityManager.createNativeQuery("ALTER TABLE peripherals MODIFY COLUMN assignedToName VARCHAR(255) NULL").executeUpdate();
+            entityManager.createNativeQuery("ALTER TABLE peripherals MODIFY COLUMN assignedDate DATE NULL").executeUpdate();
+            entityManager.createNativeQuery("ALTER TABLE peripherals MODIFY COLUMN location VARCHAR(255) NULL").executeUpdate();
+            entityManager.createNativeQuery("ALTER TABLE peripherals MODIFY COLUMN purchaseDate DATE NULL").executeUpdate();
+            entityManager.createNativeQuery("ALTER TABLE peripherals MODIFY COLUMN serialNumber VARCHAR(255) NULL").executeUpdate();
+            entityManager.createNativeQuery("ALTER TABLE peripherals MODIFY COLUMN verifiedDate DATE NULL").executeUpdate();
+            entityManager.createNativeQuery("ALTER TABLE peripherals MODIFY COLUMN status VARCHAR(255) NOT NULL DEFAULT 'Instock'").executeUpdate();
+            System.out.println("[Bootstrap] Peripherals table schema fixed");
+        } catch (Exception e) {
+            System.out.println("[Bootstrap] Peripherals schema fix skipped: " + e.getMessage());
         }
     }
     
@@ -372,25 +388,95 @@ public class Bootstrap {
             hw13.location = "Pune";
             hw13.team = "Replenish IT";
             assetService.create(hw13);
+
+            // Instock Hardware - Available for assignment
+            HardwareAsset hw14 = new HardwareAsset();
+            hw14.serviceTag = "ST-LT-2025-001";
+            hw14.assetType = AssetType.Laptop;
+            hw14.model = "Dell Latitude 7440";
+            hw14.invoiceNumber = "INV-2025-001";
+            hw14.poNumber = "PO-99001";
+            hw14.cost = new BigDecimal("1450");
+            hw14.purchaseDate = LocalDate.of(2025, 1, 15);
+            hw14.status = AssetStatus.Instock;
+            hw14.isHighValue = true;
+            hw14.location = "Pune";
+            assetService.create(hw14);
+
+            HardwareAsset hw15 = new HardwareAsset();
+            hw15.serviceTag = "ST-MN-2025-001";
+            hw15.assetType = AssetType.Monitor;
+            hw15.model = "Dell UltraSharp U2723QE 27\"";
+            hw15.invoiceNumber = "INV-2025-002";
+            hw15.poNumber = "PO-99002";
+            hw15.cost = new BigDecimal("650");
+            hw15.purchaseDate = LocalDate.of(2025, 1, 18);
+            hw15.status = AssetStatus.Instock;
+            hw15.isHighValue = false;
+            hw15.location = "Pune";
+            assetService.create(hw15);
+
+            HardwareAsset hw16 = new HardwareAsset();
+            hw16.serviceTag = "ST-MB-2025-001";
+            hw16.assetType = AssetType.Mobile;
+            hw16.model = "iPhone 15 Pro";
+            hw16.invoiceNumber = "INV-2025-003";
+            hw16.poNumber = "PO-99003";
+            hw16.cost = new BigDecimal("1199");
+            hw16.purchaseDate = LocalDate.of(2025, 1, 20);
+            hw16.status = AssetStatus.Instock;
+            hw16.isHighValue = true;
+            hw16.location = "Pune";
+            assetService.create(hw16);
+
+            HardwareAsset hw17 = new HardwareAsset();
+            hw17.serviceTag = "ST-LT-2025-002";
+            hw17.assetType = AssetType.Laptop;
+            hw17.model = "MacBook Pro 14\" M3";
+            hw17.invoiceNumber = "INV-2025-004";
+            hw17.poNumber = "PO-99004";
+            hw17.cost = new BigDecimal("2499");
+            hw17.purchaseDate = LocalDate.of(2025, 1, 22);
+            hw17.status = AssetStatus.Instock;
+            hw17.isHighValue = true;
+            hw17.location = "Pune";
+            assetService.create(hw17);
+
+            HardwareAsset hw18 = new HardwareAsset();
+            hw18.serviceTag = "ST-MN-2025-002";
+            hw18.assetType = AssetType.Monitor;
+            hw18.model = "LG 32UN880-B 32\" 4K";
+            hw18.invoiceNumber = "INV-2025-005";
+            hw18.poNumber = "PO-99005";
+            hw18.cost = new BigDecimal("799");
+            hw18.purchaseDate = LocalDate.of(2025, 1, 25);
+            hw18.status = AssetStatus.Instock;
+            hw18.isHighValue = false;
+            hw18.location = "Pune";
+            assetService.create(hw18);
         }
     }
     
     private void seedPeripherals() {
         if (peripheralService.findAll().isEmpty()) {
-            // Emily Johnson peripherals
+            // ========== ASSIGNED PERIPHERALS (to employees) ==========
             // Dhruv — a139208 — 2024-01-15 — (2 items)
             Peripheral p1 = new Peripheral();
             p1.type = PeripheralType.Headphones;
+            p1.serialNumber = "HP-001";
             p1.assignedTo = "a139208";
             p1.assignedToName = "Dhruv Khullar";
+            p1.status = PeripheralStatus.Assigned;
             p1.verified = false;
             p1.assignedDate = LocalDate.of(2024, 1, 15);
             peripheralService.create(p1);
             
             Peripheral p2 = new Peripheral();
             p2.type = PeripheralType.Mouse;
+            p2.serialNumber = "MS-001";
             p2.assignedTo = "a139208";
             p2.assignedToName = "Dhruv Khullar";
+            p2.status = PeripheralStatus.Assigned;
             p2.verified = false;
             p2.assignedDate = LocalDate.of(2024, 1, 15);
             peripheralService.create(p2);
@@ -398,24 +484,30 @@ public class Bootstrap {
             // Ritu — a154795 — 2024-01-16 — (3 items)
             Peripheral p3 = new Peripheral();
             p3.type = PeripheralType.Dock;
+            p3.serialNumber = "DK-001";
             p3.assignedTo = "a154795";
             p3.assignedToName = "Ritu Tak";
+            p3.status = PeripheralStatus.Assigned;
             p3.verified = false;
             p3.assignedDate = LocalDate.of(2024, 1, 16);
             peripheralService.create(p3);
             
             Peripheral p4 = new Peripheral();
             p4.type = PeripheralType.Keyboard;
+            p4.serialNumber = "KB-001";
             p4.assignedTo = "a154795";
             p4.assignedToName = "Ritu Tak";
+            p4.status = PeripheralStatus.Assigned;
             p4.verified = false;
             p4.assignedDate = LocalDate.of(2024, 1, 16);
             peripheralService.create(p4);
             
             Peripheral p5 = new Peripheral();
             p5.type = PeripheralType.USBCCable;
+            p5.serialNumber = "UC-001";
             p5.assignedTo = "a154795";
             p5.assignedToName = "Ritu Tak";
+            p5.status = PeripheralStatus.Assigned;
             p5.verified = false;
             p5.assignedDate = LocalDate.of(2024, 1, 16);
             peripheralService.create(p5);
@@ -423,16 +515,20 @@ public class Bootstrap {
             // Nitin — a147083 — 2024-01-17 — (2 items)
             Peripheral p6 = new Peripheral();
             p6.type = PeripheralType.Charger;
+            p6.serialNumber = "CH-001";
             p6.assignedTo = "a147083";
             p6.assignedToName = "Nitin Krishna";
+            p6.status = PeripheralStatus.Assigned;
             p6.verified = false;
             p6.assignedDate = LocalDate.of(2024, 1, 17);
             peripheralService.create(p6);
             
             Peripheral p7 = new Peripheral();
             p7.type = PeripheralType.USBCCable;
+            p7.serialNumber = "UC-002";
             p7.assignedTo = "a147083";
-            p7.assignedToName = "Nitin Krishnha";
+            p7.assignedToName = "Nitin Krishna";
+            p7.status = PeripheralStatus.Assigned;
             p7.verified = false;
             p7.assignedDate = LocalDate.of(2024, 1, 17);
             peripheralService.create(p7);
@@ -440,24 +536,30 @@ public class Bootstrap {
             // Rajas — a157279 — 2024-01-18 — (3 items)
             Peripheral p8 = new Peripheral();
             p8.type = PeripheralType.Charger;
+            p8.serialNumber = "CH-002";
             p8.assignedTo = "a157279";
             p8.assignedToName = "Rajas Nandgaonkar";
+            p8.status = PeripheralStatus.Assigned;
             p8.verified = false;
             p8.assignedDate = LocalDate.of(2024, 1, 18);
             peripheralService.create(p8);
             
             Peripheral p9 = new Peripheral();
             p9.type = PeripheralType.Mouse;
+            p9.serialNumber = "MS-002";
             p9.assignedTo = "a157279";
             p9.assignedToName = "Rajas Nandgaonkar";
+            p9.status = PeripheralStatus.Assigned;
             p9.verified = false;
             p9.assignedDate = LocalDate.of(2024, 1, 18);
             peripheralService.create(p9);
             
             Peripheral p10 = new Peripheral();
             p10.type = PeripheralType.Keyboard;
+            p10.serialNumber = "KB-002";
             p10.assignedTo = "a157279";
             p10.assignedToName = "Rajas Nandgaonkar";
+            p10.status = PeripheralStatus.Assigned;
             p10.verified = false;
             p10.assignedDate = LocalDate.of(2024, 1, 18);
             peripheralService.create(p10);
@@ -465,16 +567,20 @@ public class Bootstrap {
             // Sanket — a157202 — 2024-01-19 — (2 items)
             Peripheral p11 = new Peripheral();
             p11.type = PeripheralType.Headphones;
+            p11.serialNumber = "HP-002";
             p11.assignedTo = "a157202";
             p11.assignedToName = "Sanket Disale";
+            p11.status = PeripheralStatus.Assigned;
             p11.verified = false;
             p11.assignedDate = LocalDate.of(2024, 1, 19);
             peripheralService.create(p11);
             
             Peripheral p12 = new Peripheral();
             p12.type = PeripheralType.Dock;
+            p12.serialNumber = "DK-002";
             p12.assignedTo = "a157202";
             p12.assignedToName = "Sanket Disale";
+            p12.status = PeripheralStatus.Assigned;
             p12.verified = false;
             p12.assignedDate = LocalDate.of(2024, 1, 19);
             peripheralService.create(p12);
@@ -482,24 +588,30 @@ public class Bootstrap {
             // Aishwarya — a154098 — 2024-01-20 — (3 items)
             Peripheral p13 = new Peripheral();
             p13.type = PeripheralType.Charger;
+            p13.serialNumber = "CH-003";
             p13.assignedTo = "a154098";
             p13.assignedToName = "Aishwarya Somadale";
+            p13.status = PeripheralStatus.Assigned;
             p13.verified = false;
             p13.assignedDate = LocalDate.of(2024, 1, 20);
             peripheralService.create(p13);
             
             Peripheral p14 = new Peripheral();
             p14.type = PeripheralType.Headphones;
+            p14.serialNumber = "HP-003";
             p14.assignedTo = "a154098";
             p14.assignedToName = "Aishwarya Somadale";
+            p14.status = PeripheralStatus.Assigned;
             p14.verified = false;
             p14.assignedDate = LocalDate.of(2024, 1, 20);
             peripheralService.create(p14);
             
             Peripheral p15 = new Peripheral();
             p15.type = PeripheralType.Dock;
+            p15.serialNumber = "DK-003";
             p15.assignedTo = "a154098";
             p15.assignedToName = "Aishwarya Somadale";
+            p15.status = PeripheralStatus.Assigned;
             p15.verified = false;
             p15.assignedDate = LocalDate.of(2024, 1, 20);
             peripheralService.create(p15);
@@ -507,16 +619,20 @@ public class Bootstrap {
             // Kamlesh — a157196 — 2024-01-21 — (2 items)
             Peripheral p16 = new Peripheral();
             p16.type = PeripheralType.Keyboard;
+            p16.serialNumber = "KB-003";
             p16.assignedTo = "a157196";
             p16.assignedToName = "Kamlesh Badade";
+            p16.status = PeripheralStatus.Assigned;
             p16.verified = false;
             p16.assignedDate = LocalDate.of(2024, 1, 21);
             peripheralService.create(p16);
             
             Peripheral p17 = new Peripheral();
             p17.type = PeripheralType.USBCCable;
+            p17.serialNumber = "UC-003";
             p17.assignedTo = "a157196";
             p17.assignedToName = "Kamlesh Badade";
+            p17.status = PeripheralStatus.Assigned;
             p17.verified = false;
             p17.assignedDate = LocalDate.of(2024, 1, 21);
             peripheralService.create(p17);
@@ -524,24 +640,30 @@ public class Bootstrap {
             // Arati — a157201 — 2024-01-22 — (3 items)
             Peripheral p18 = new Peripheral();
             p18.type = PeripheralType.Charger;
+            p18.serialNumber = "CH-004";
             p18.assignedTo = "a157201";
             p18.assignedToName = "Arati Pisal";
+            p18.status = PeripheralStatus.Assigned;
             p18.verified = false;
             p18.assignedDate = LocalDate.of(2024, 1, 22);
             peripheralService.create(p18);
             
             Peripheral p19 = new Peripheral();
             p19.type = PeripheralType.Mouse;
+            p19.serialNumber = "MS-003";
             p19.assignedTo = "a157201";
             p19.assignedToName = "Arati Pisal";
+            p19.status = PeripheralStatus.Assigned;
             p19.verified = false;
             p19.assignedDate = LocalDate.of(2024, 1, 22);
             peripheralService.create(p19);
             
             Peripheral p20 = new Peripheral();
             p20.type = PeripheralType.Dock;
+            p20.serialNumber = "DK-004";
             p20.assignedTo = "a157201";
             p20.assignedToName = "Arati Pisal";
+            p20.status = PeripheralStatus.Assigned;
             p20.verified = false;
             p20.assignedDate = LocalDate.of(2024, 1, 22);
             peripheralService.create(p20);
@@ -549,16 +671,20 @@ public class Bootstrap {
             // Ritika — a154096 — 2024-01-23 — (2 items)
             Peripheral p21 = new Peripheral();
             p21.type = PeripheralType.Headphones;
+            p21.serialNumber = "HP-004";
             p21.assignedTo = "a154096";
             p21.assignedToName = "Ritika Mokashi";
+            p21.status = PeripheralStatus.Assigned;
             p21.verified = false;
             p21.assignedDate = LocalDate.of(2024, 1, 23);
             peripheralService.create(p21);
             
             Peripheral p22 = new Peripheral();
             p22.type = PeripheralType.Keyboard;
+            p22.serialNumber = "KB-004";
             p22.assignedTo = "a154096";
             p22.assignedToName = "Ritika Mokashi";
+            p22.status = PeripheralStatus.Assigned;
             p22.verified = false;
             p22.assignedDate = LocalDate.of(2024, 1, 23);
             peripheralService.create(p22);
@@ -566,30 +692,119 @@ public class Bootstrap {
             // Nadeem — a156144 — 2024-01-24 — (3 items)
             Peripheral p23 = new Peripheral();
             p23.type = PeripheralType.Mouse;
+            p23.serialNumber = "MS-004";
             p23.assignedTo = "a156144";
             p23.assignedToName = "Nadeem Mujawar";
+            p23.status = PeripheralStatus.Assigned;
             p23.verified = false;
             p23.assignedDate = LocalDate.of(2024, 1, 24);
             peripheralService.create(p23);
             
             Peripheral p24 = new Peripheral();
             p24.type = PeripheralType.Dock;
+            p24.serialNumber = "DK-005";
             p24.assignedTo = "a156144";
             p24.assignedToName = "Nadeem Mujawar";
+            p24.status = PeripheralStatus.Assigned;
             p24.verified = false;
             p24.assignedDate = LocalDate.of(2024, 1, 24);
             peripheralService.create(p24);
             
             Peripheral p25 = new Peripheral();
             p25.type = PeripheralType.USBCCable;
+            p25.serialNumber = "UC-004";
             p25.assignedTo = "a156144";
             p25.assignedToName = "Nadeem Mujawar";
+            p25.status = PeripheralStatus.Assigned;
             p25.verified = false;
             p25.assignedDate = LocalDate.of(2024, 1, 24);
             peripheralService.create(p25);
+            
+            System.out.println("[Bootstrap] Seeded 25 assigned peripherals and 27 instock peripherals");
         }
+        
+        // Always check if instock peripherals need to be added (even if assigned ones exist)
+        seedInstockPeripherals();
     }
     
+    private void seedInstockPeripherals() {
+        // Check if we have any instock peripherals
+        long instockCount = peripheralService.findInstock().size();
+        if (instockCount == 0) {
+            System.out.println("[Bootstrap] No instock peripherals found, adding inventory...");
+            
+            // 5 Keyboards in stock
+            for (int i = 1; i <= 5; i++) {
+                Peripheral kb = new Peripheral();
+                kb.type = PeripheralType.Keyboard;
+                kb.serialNumber = "KB-STK-" + String.format("%03d", i);
+                kb.status = PeripheralStatus.Instock;
+                kb.location = "IT Storage Room A";
+                kb.purchaseDate = LocalDate.of(2024, 6, 1);
+                peripheralService.create(kb);
+            }
+            
+            // 5 Mice in stock
+            for (int i = 1; i <= 5; i++) {
+                Peripheral ms = new Peripheral();
+                ms.type = PeripheralType.Mouse;
+                ms.serialNumber = "MS-STK-" + String.format("%03d", i);
+                ms.status = PeripheralStatus.Instock;
+                ms.location = "IT Storage Room A";
+                ms.purchaseDate = LocalDate.of(2024, 6, 1);
+                peripheralService.create(ms);
+            }
+            
+            // 3 Docks in stock
+            for (int i = 1; i <= 3; i++) {
+                Peripheral dk = new Peripheral();
+                dk.type = PeripheralType.Dock;
+                dk.serialNumber = "DK-STK-" + String.format("%03d", i);
+                dk.status = PeripheralStatus.Instock;
+                dk.location = "IT Storage Room B";
+                dk.purchaseDate = LocalDate.of(2024, 5, 15);
+                peripheralService.create(dk);
+            }
+            
+            // 4 Chargers in stock
+            for (int i = 1; i <= 4; i++) {
+                Peripheral ch = new Peripheral();
+                ch.type = PeripheralType.Charger;
+                ch.serialNumber = "CH-STK-" + String.format("%03d", i);
+                ch.status = PeripheralStatus.Instock;
+                ch.location = "IT Storage Room A";
+                ch.purchaseDate = LocalDate.of(2024, 5, 20);
+                peripheralService.create(ch);
+            }
+            
+            // 6 USB-C Cables in stock
+            for (int i = 1; i <= 6; i++) {
+                Peripheral uc = new Peripheral();
+                uc.type = PeripheralType.USBCCable;
+                uc.serialNumber = "UC-STK-" + String.format("%03d", i);
+                uc.status = PeripheralStatus.Instock;
+                uc.location = "IT Storage Room A";
+                uc.purchaseDate = LocalDate.of(2024, 6, 10);
+                peripheralService.create(uc);
+            }
+            
+            // 4 Headphones in stock
+            for (int i = 1; i <= 4; i++) {
+                Peripheral hp = new Peripheral();
+                hp.type = PeripheralType.Headphones;
+                hp.serialNumber = "HP-STK-" + String.format("%03d", i);
+                hp.status = PeripheralStatus.Instock;
+                hp.location = "IT Storage Room B";
+                hp.purchaseDate = LocalDate.of(2024, 4, 25);
+                peripheralService.create(hp);
+            }
+            
+            System.out.println("[Bootstrap] Added 27 instock peripherals to inventory");
+        } else {
+            System.out.println("[Bootstrap] Found " + instockCount + " instock peripherals in inventory");
+        }
+    }
+
     private void seedCampaigns() {
         // Seed each campaign individually by checking if it exists by name
         

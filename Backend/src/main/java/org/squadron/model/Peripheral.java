@@ -15,9 +15,11 @@ public class Peripheral extends PanacheEntity {
     public String serialNumber;
     
     @Column(nullable = false)
-    public String assignedTo; // employee ID
+    @Enumerated(EnumType.STRING)
+    public PeripheralStatus status = PeripheralStatus.Instock;
     
-    @Column(nullable = false)
+    public String assignedTo; // employee ID (nullable - null means instock)
+    
     public String assignedToName;
     
     public boolean verified;
@@ -26,8 +28,16 @@ public class Peripheral extends PanacheEntity {
     
     public LocalDate verifiedDate;
     
-    // Enum definition
+    public LocalDate purchaseDate;
+    
+    public String location;
+    
+    // Enum definitions
     public enum PeripheralType {
         Charger, Headphones, Dock, Mouse, Keyboard, USBCCable
+    }
+    
+    public enum PeripheralStatus {
+        Instock, Assigned
     }
 }

@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.squadron.model.Peripheral;
 import org.squadron.model.Peripheral.PeripheralType;
+import org.squadron.model.Peripheral.PeripheralStatus;
 import org.squadron.repository.PeripheralRepository;
 
 import java.time.LocalDate;
@@ -42,10 +43,47 @@ public class PeripheralService {
         return repository.findUnverified();
     }
     
+    // Stock management methods
+    public List<Peripheral> findInstock() {
+        return repository.list("status", PeripheralStatus.Instock);
+    }
+    
+    public List<Peripheral> findInstockByType(PeripheralType type) {
+        return repository.list("status = ?1 and type = ?2", PeripheralStatus.Instock, type);
+    }
+    
+    public long countInstockByType(PeripheralType type) {
+        return repository.count("status = ?1 and type = ?2", PeripheralStatus.Instock, type);
+    }
+    
+    public Map<String, Long> getStockByType() {
+        Map<String, Long> stock = new HashMap<>();
+        for (PeripheralType type : PeripheralType.values()) {
+            stock.put(type.name(), countInstockByType(type));
+        }
+        return stock;
+    }
+    
     @Transactional
     public Peripheral create(Peripheral peripheral) {
+        if (peripheral.status == null) {
+            peripheral.status = PeripheralStatus.Instock;
+        }
         repository.persist(peripheral);
         return peripheral;
+    }
+    
+    @Transactional 
+    public Peripheral addToStock(PeripheralType type, String serialNumber, String location) {
+        Peripheral p = new Peripheral();
+        p.type = type;
+        p.serialNumber = serialNumber;
+        p.status = PeripheralStatus.Instock;
+        p.location = location;
+        p.purchaseDate = LocalDate.now();
+        p.verified = false;
+        repository.persist(p);
+        return p;
     }
     
     @Transactional
@@ -61,20 +99,54 @@ public class PeripheralService {
         existing.verified = peripheral.verified;
         existing.assignedDate = peripheral.assignedDate;
         existing.verifiedDate = peripheral.verifiedDate;
+        existing.status = peripheral.status;
+        existing.location = peripheral.location;
         return existing;
+    }
+    
+    @Transactional
+    public Peripheral assignFromStock(PeripheralType type, String employeeId, String employeeName) {
+        // Find an available peripheral of this type in stock
+        List<Peripheral> available = findInstockByType(type);
+        if (available.isEmpty()) {
+            return null; // No stock available
+        }
+        
+        // Take the first available one
+        Peripheral p = available.get(0);
+        p.assignedTo = employeeId;
+        p.assignedToName = employeeName;
+        p.assignedDate = LocalDate.now();
+        p.status = PeripheralStatus.Assigned;
+        p.verified = false;
+        return p;
     }
     
     @Transactional
     public Peripheral assignToEmployee(PeripheralType type, String serialNumber, 
                                         String employeeId, String employeeName) {
-        Peripheral p = new Peripheral();
-        p.type = type;
-        p.serialNumber = serialNumber;
-        p.assignedTo = employeeId;
-        p.assignedToName = employeeName;
-        p.assignedDate = LocalDate.now();
+        // Try to assign from stock first
+        Peripheral p = assignFromStock(type, employeeId, employeeName);
+        if (p != null) {
+            return p;
+        }
+        
+        // If no stock, return null (don't create new peripheral)
+        return null;
+    }
+    
+    @Transactional
+    public Peripheral returnToStock(Long id) {
+        Peripheral p = repository.findById(id);
+        if (p == null) {
+            return null;
+        }
+        p.assignedTo = null;
+        p.assignedToName = null;
+        p.assignedDate = null;
+        p.status = PeripheralStatus.Instock;
         p.verified = false;
-        repository.persist(p);
+        p.verifiedDate = null;
         return p;
     }
     
@@ -109,6 +181,9 @@ public class PeripheralService {
         stats.put("total", repository.count());
         stats.put("verified", repository.countVerified());
         stats.put("unverified", repository.countUnverified());
+        stats.put("instock", repository.count("status", PeripheralStatus.Instock));
+        stats.put("assigned", repository.count("status", PeripheralStatus.Assigned));
+        stats.put("stockByType", getStockByType());
         return stats;
     }
 }

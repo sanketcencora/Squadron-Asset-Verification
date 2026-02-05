@@ -153,4 +153,46 @@ public class HardwareAssetResource {
         }
         return Response.noContent().build();
     }
+    
+    // Bulk import from CSV (ServiceNow format)
+    @POST
+    @Path("/bulk-import")
+    public Response bulkImport(List<HardwareAsset> assets) {
+        if (assets == null || assets.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(Map.of("message", "No assets provided"))
+                .build();
+        }
+        
+        int created = 0;
+        int updated = 0;
+        int errors = 0;
+        
+        for (HardwareAsset asset : assets) {
+            try {
+                // Check if asset already exists by service tag
+                HardwareAsset existing = service.findByServiceTag(asset.serviceTag);
+                if (existing != null) {
+                    // Update existing asset
+                    service.update(existing.id, asset);
+                    updated++;
+                } else {
+                    // Create new asset
+                    service.create(asset);
+                    created++;
+                }
+            } catch (Exception e) {
+                errors++;
+                System.err.println("Error importing asset: " + asset.serviceTag + " - " + e.getMessage());
+            }
+        }
+        
+        return Response.ok(Map.of(
+            "message", "Import completed",
+            "created", created,
+            "updated", updated,
+            "errors", errors,
+            "total", assets.size()
+        )).build();
+    }
 }

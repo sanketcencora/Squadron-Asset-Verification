@@ -259,6 +259,19 @@ export const assetsApi = {
   delete: async (id: number): Promise<void> => {
     return fetchApi<void>(`/assets/${id}`, { method: 'DELETE' });
   },
+
+  bulkImport: async (assets: Partial<HardwareAsset>[]): Promise<{
+    message: string;
+    created: number;
+    updated: number;
+    errors: number;
+    total: number;
+  }> => {
+    return fetchApi('/assets/bulk-import', {
+      method: 'POST',
+      body: JSON.stringify(assets),
+    });
+  },
 };
 
 // Peripherals API
@@ -287,7 +300,19 @@ export const peripheralsApi = {
     return fetchApi<Peripheral[]>('/peripherals/unverified');
   },
 
-  getStats: async (): Promise<Record<string, number>> => {
+  getInstock: async (): Promise<Peripheral[]> => {
+    return fetchApi<Peripheral[]>('/peripherals/instock');
+  },
+
+  getInstockByType: async (type: PeripheralType): Promise<Peripheral[]> => {
+    return fetchApi<Peripheral[]>(`/peripherals/instock/${type}`);
+  },
+
+  getStock: async (): Promise<Record<string, number>> => {
+    return fetchApi<Record<string, number>>('/peripherals/stock');
+  },
+
+  getStats: async (): Promise<Record<string, any>> => {
     return fetchApi('/peripherals/stats');
   },
 
@@ -295,6 +320,13 @@ export const peripheralsApi = {
     return fetchApi<Peripheral>('/peripherals', {
       method: 'POST',
       body: JSON.stringify(peripheral),
+    });
+  },
+
+  addToStock: async (type: PeripheralType, serialNumber: string, location: string): Promise<Peripheral> => {
+    return fetchApi<Peripheral>('/peripherals/stock/add', {
+      method: 'POST',
+      body: JSON.stringify({ type, serialNumber, location }),
     });
   },
 
@@ -315,6 +347,10 @@ export const peripheralsApi = {
       method: 'POST',
       body: JSON.stringify({ type, serialNumber, employeeId, employeeName }),
     });
+  },
+
+  returnToStock: async (id: number): Promise<Peripheral> => {
+    return fetchApi<Peripheral>(`/peripherals/${id}/return`, { method: 'POST' });
   },
 
   verify: async (id: number): Promise<Peripheral> => {

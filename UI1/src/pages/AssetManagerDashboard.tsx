@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { mockHardwareAssets, mockPeripherals, mockUsers, HardwareAsset, Peripheral } from '@/data/mockData';
 import {
@@ -15,7 +15,9 @@ import {
   FileSpreadsheet,
   Loader2,
   Wifi,
-  WifiOff
+  WifiOff,
+  X,
+  FileText
 } from 'lucide-react';
 import { exportToExcel, formatDateForExcel, ExcelExportRow } from '@/utils/excelExport';
 import { api, HardwareAssetAPI, PeripheralAPI } from '../services/api';
@@ -25,10 +27,14 @@ interface AssetManagerDashboardProps {
 }
 
 export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'instock' | 'assigned' | 'peripherals' | 'exceptions'>('instock');
+  const [activeTab, setActiveTab] = useState<'instock' | 'assigned' | 'peripherals'>('instock');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{ message: string; created: number; updated: number; errors: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // State for backend data
   const [hardwareAssets, setHardwareAssets] = useState<HardwareAssetAPI[]>([]);
@@ -76,7 +82,7 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
   const displayPeripherals: Peripheral[] = isBackendConnected
     ? peripherals.map(p => ({
         id: p.id?.toString() || '',
-        type: p.type as 'Charger' | 'Headphones' | 'Dock' | 'Mouse' | 'Keyboard' | 'USB-C Cable',
+        type: (p.type === 'USBCCable' ? 'USB-C Cable' : p.type) as 'Charger' | 'Headphones' | 'Dock' | 'Mouse' | 'Keyboard' | 'USB-C Cable',
         serialNumber: p.serialNumber || undefined,
         assignedTo: p.assignedTo,
         assignedToName: p.assignedToName,
@@ -92,13 +98,130 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
   const tabs = [
     { id: 'instock' as const, label: 'Instock Hardware', count: instockAssets.length, icon: Package },
     { id: 'assigned' as const, label: 'Assigned Hardware', count: assignedAssets.length, icon: CheckCircle },
-    { id: 'peripherals' as const, label: 'Assigned Peripherals', count: displayPeripherals.length, icon: Package },
-    { id: 'exceptions' as const, label: 'Verification Exceptions', count: exceptionAssets.length, icon: AlertCircle }
+    { id: 'peripherals' as const, label: 'Assigned Peripherals', count: displayPeripherals.length, icon: Package }
   ];
 
   const handleCSVUpload = () => {
-    // Mock CSV upload
-    alert('CSV upload functionality - In production, this would import ServiceNow asset data');
+    setShowUploadModal(true);
+    setUploadResult(null);
+  };
+
+  const parseCSVFile = (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        if (lines.length < 2) {
+          reject(new Error('CSV file is empty or has no data rows'));
+          return;
+        }
+        
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+        const data = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''));
+          const row: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            row[header] = values[index] || '';
+          });
+          data.push(row);
+        }
+        
+        resolve(data);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  };
+
+  const mapCSVToAsset = (row: Record<string, string>): Partial<HardwareAssetAPI> => {
+    // Map common ServiceNow CSV fields to our asset format
+    const assetTypeMap: Record<string, string> = {
+      'laptop': 'Laptop',
+      'notebook': 'Laptop',
+      'monitor': 'Monitor',
+      'display': 'Monitor',
+      'mobile': 'Mobile',
+      'phone': 'Mobile',
+      'iphone': 'Mobile',
+      'android': 'Mobile',
+    };
+
+    const typeValue = (row['asset type'] || row['type'] || row['assettype'] || row['category'] || 'Laptop').toLowerCase();
+    const assetType = Object.keys(assetTypeMap).find(key => typeValue.includes(key)) 
+      ? assetTypeMap[Object.keys(assetTypeMap).find(key => typeValue.includes(key))!]
+      : 'Laptop';
+
+    return {
+      serviceTag: row['service tag'] || row['servicetag'] || row['asset tag'] || row['serial'] || row['serial number'] || '',
+      assetType: assetType as any,
+      model: row['model'] || row['model number'] || row['product'] || '',
+      invoiceNumber: row['invoice'] || row['invoice number'] || row['invoicenumber'] || '',
+      poNumber: row['po'] || row['po number'] || row['ponumber'] || row['purchase order'] || '',
+      cost: parseFloat(row['cost'] || row['price'] || row['value'] || '0') || 0,
+      purchaseDate: row['purchase date'] || row['purchasedate'] || row['date'] || new Date().toISOString().split('T')[0],
+      assignedTo: row['assigned to'] || row['assignedto'] || row['employee id'] || row['employeeid'] || row['user'] || '',
+      assignedToName: row['assigned to name'] || row['assignedtoname'] || row['employee name'] || row['employeename'] || row['user name'] || '',
+      status: (row['assigned to'] || row['assignedto'] || row['employee id']) ? 'Assigned' : 'Instock',
+      isHighValue: parseFloat(row['cost'] || row['price'] || row['value'] || '0') > 1000,
+      location: row['location'] || row['site'] || 'Pune',
+      team: row['team'] || row['department'] || row['dept'] || '',
+    };
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadLoading(true);
+    setUploadResult(null);
+
+    try {
+      const csvData = await parseCSVFile(file);
+      const assets = csvData.map(mapCSVToAsset).filter(a => a.serviceTag);
+
+      if (assets.length === 0) {
+        setUploadResult({ message: 'No valid assets found in CSV', created: 0, updated: 0, errors: 0 });
+        setUploadLoading(false);
+        return;
+      }
+
+      const result = await api.assets.bulkImport(assets);
+      setUploadResult(result);
+
+      // Refresh the assets list
+      const assetsData = await api.assets.getAll();
+      setHardwareAssets(assetsData);
+    } catch (error: any) {
+      setUploadResult({ 
+        message: error.message || 'Failed to import CSV', 
+        created: 0, 
+        updated: 0, 
+        errors: 1 
+      });
+    } finally {
+      setUploadLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const downloadSampleCSV = () => {
+    const sampleCSV = `Service Tag,Asset Type,Model,Cost,Purchase Date,Assigned To,Assigned To Name,Location,Team
+ST-LT-2025-100,Laptop,Dell Latitude 5550,1350,2025-02-01,a123456,John Doe,Pune,Engineering
+ST-MN-2025-100,Monitor,Dell U2723QE,650,2025-02-01,,,Pune,
+ST-MB-2025-100,Mobile,iPhone 15 Pro,1199,2025-02-02,a123457,Jane Smith,Mumbai,Sales`;
+    
+    const blob = new Blob([sampleCSV], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_servicenow_assets.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleExport = () => {
@@ -130,15 +253,7 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
         'Assigned Date': formatDateForExcel(peripheral.assignedDate),
         'Verified': peripheral.verified ? 'Verified' : 'Pending'
       }));
-    } else if (activeTab === 'exceptions') {
-      rows = exceptionAssets.map(asset => ({
-        'Service Tag': asset.serviceTag,
-        'Asset Type': asset.assetType,
-        'Assigned To': asset.assignedToName,
-        'Issue': asset.verificationStatus,
-        'Last Verified': asset.lastVerifiedDate ? formatDateForExcel(asset.lastVerifiedDate) : '—'
-      }));
-    }
+    } 
     exportToExcel(rows, `AssetManagerDashboard_${activeTab}`);
   };
 
@@ -154,14 +269,101 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
         </div>
       )}
 
+      {/* CSV Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Upload CSV (ServiceNow)</h2>
+              <button 
+                onClick={() => setShowUploadModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  <strong>Supported CSV Format:</strong> ServiceNow asset export with columns like 
+                  Service Tag, Asset Type, Model, Cost, Purchase Date, Assigned To, etc.
+                </p>
+              </div>
+
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                {uploadLoading ? (
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-3" />
+                    <p className="text-gray-600">Processing CSV file...</p>
+                  </div>
+                ) : (
+                  <>
+                    <FileText className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                    <label 
+                      htmlFor="csv-upload"
+                      className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Click to select CSV file
+                    </label>
+                    <p className="text-sm text-gray-500 mt-2">or drag and drop</p>
+                  </>
+                )}
+              </div>
+
+              {uploadResult && (
+                <div className={`rounded-lg p-4 ${
+                  uploadResult.errors > 0 ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'
+                }`}>
+                  <p className={`font-medium ${uploadResult.errors > 0 ? 'text-red-900' : 'text-green-900'}`}>
+                    {uploadResult.message}
+                  </p>
+                  <div className="mt-2 text-sm space-y-1">
+                    <p className="text-green-700">✓ Created: {uploadResult.created} assets</p>
+                    <p className="text-blue-700">↻ Updated: {uploadResult.updated} assets</p>
+                    {uploadResult.errors > 0 && (
+                      <p className="text-red-700">✗ Errors: {uploadResult.errors}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-4 border-t">
+                <button
+                  onClick={downloadSampleCSV}
+                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center space-x-1"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Sample CSV</span>
+                </button>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Connection Status Banner */}
-      <div className={`mb-4 px-4 py-2 rounded-lg flex items-center space-x-2 text-sm ${
+      {/* <div className={`mb-4 px-4 py-2 rounded-lg flex items-center space-x-2 text-sm ${
         isBackendConnected ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
       }`}>
         {isBackendConnected ? (
           <>
             <Wifi className="w-4 h-4" />
-            <span>Connected to backend - Showing live data</span>
+           
           </>
         ) : (
           <>
@@ -169,7 +371,7 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
             <span>Using mock data - Backend not available</span>
           </>
         )}
-      </div>
+      </div> */}
 
       {/* Header */}
       <div className="mb-8">
@@ -223,14 +425,14 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
           <p className="text-3xl font-semibold text-gray-900">{assignedAssets.length}</p>
           <p className="text-sm text-gray-600 mt-1">To employees</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {/* <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm text-gray-600">Exceptions</p>
             <AlertCircle className="w-5 h-5 text-red-600" />
           </div>
           <p className="text-3xl font-semibold text-gray-900">{exceptionAssets.length}</p>
           <p className="text-sm text-red-600 mt-1">Require attention</p>
-        </div>
+        </div> */}
       </div>
 
       {/* Tabs */}
@@ -336,7 +538,14 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {instockAssets.map((asset) => (
+                  {instockAssets
+                    .filter(a => 
+                      !searchQuery || 
+                      a.serviceTag.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      a.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      a.assetType.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map((asset) => (
                     <tr key={asset.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="font-mono text-sm font-medium text-gray-900">{asset.serviceTag}</span>
@@ -395,7 +604,15 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {assignedAssets.map((asset) => (
+                {assignedAssets
+                  .filter(a => 
+                    !searchQuery || 
+                    a.serviceTag.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    a.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    a.assignedToName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    a.assignedTo?.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((asset) => (
                   <tr key={asset.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-mono text-sm font-medium text-gray-900">{asset.serviceTag}</span>
@@ -458,7 +675,15 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {mockPeripherals.map((peripheral) => (
+                {displayPeripherals
+                  .filter(p => 
+                    !searchQuery || 
+                    p.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.assignedToName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.assignedTo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((peripheral) => (
                   <tr key={peripheral.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-gray-900">{peripheral.type}</span>
@@ -503,70 +728,13 @@ export function AssetManagerDashboard({ onAssignAsset }: AssetManagerDashboardPr
             </table>
           )}
 
-          {/* Exceptions */}
-          {activeTab === 'exceptions' && (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Service Tag
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Asset Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Assigned To
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Issue
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Last Verified
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {exceptionAssets.map((asset) => (
-                  <tr key={asset.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-mono text-sm font-medium text-gray-900">{asset.serviceTag}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{asset.assetType}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{asset.assignedToName}</p>
-                        <p className="text-xs text-gray-500">{asset.assignedTo}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={asset.verificationStatus} size="sm" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">
-                        {asset.lastVerifiedDate ? new Date(asset.lastVerifiedDate).toLocaleDateString() : '—'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                        Review →
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+         
 
           {/* Empty State */}
           {((activeTab === 'instock' && instockAssets.length === 0) ||
             (activeTab === 'assigned' && assignedAssets.length === 0) ||
-            (activeTab === 'peripherals' && mockPeripherals.length === 0) ||
-            (activeTab === 'exceptions' && exceptionAssets.length === 0)) && (
+            (activeTab === 'peripherals' && displayPeripherals.length === 0)
+          ) && (
             <div className="p-12 text-center">
               <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 font-medium mb-1">No items found</p>

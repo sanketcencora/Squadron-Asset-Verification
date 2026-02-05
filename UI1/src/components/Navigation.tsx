@@ -24,7 +24,6 @@ export function Navigation({ role, currentPage, onNavigate, onLogout, userName }
     if (role === 'assetManager') {
       return [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'assets', label: 'Asset Management', icon: Package },
         { id: 'verification-review', label: 'Verification Review', icon: FileText }
       ];
     }

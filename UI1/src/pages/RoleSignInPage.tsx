@@ -36,21 +36,21 @@ export function RoleSignInPage({ role, onLogin, onBack }: RoleSignInPageProps) {
       demoEmail: 'emily.johnson@company.com',
       description: 'Verify assigned hardware and peripherals',
     },
-    networkEquipment: {
-      title: 'Network Equipment Manager',
-      demoEmail: 'net.manager@company.com',
-      description: 'Network hardware & equipment management',
-    },
-    audioVideo: {
-      title: 'Audio Video Manager',
-      demoEmail: 'av.manager@company.com',
-      description: 'Audio/video equipment & systems management',
-    },
-    furniture: {
-      title: 'Workspace Manager',
-      demoEmail: 'workspace.manager@company.com',
-      description: 'Furniture & office equipment management',
-    },
+    // networkEquipment: {
+    //   title: 'Network Equipment Manager',
+    //   demoEmail: 'net.manager@company.com',
+    //   description: 'Network hardware & equipment management',
+    // },
+    // audioVideo: {
+    //   title: 'Audio Video Manager',
+    //   demoEmail: 'av.manager@company.com',
+    //   description: 'Audio/video equipment & systems management',
+    // },
+    // furniture: {
+    //   title: 'Workspace Manager',
+    //   demoEmail: 'workspace.manager@company.com',
+    //   description: 'Furniture & office equipment management',
+    // },
   } as const;
 
   const assetDepartments = [

@@ -48,6 +48,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       };
       
       const role = roleMap[user.role] || selectedRole!;
+      
+      // Verify that the user's actual role matches the selected role
+      if (selectedRole && role !== selectedRole) {
+        setError(`Access denied. You are logged in as ${role}, not ${selectedRole}. Please select the correct role.`);
+        setLoading(false);
+        return;
+      }
+      
       onLogin(role, user.id.toString());
       setLoading(false);
     } catch (err: any) {
@@ -78,7 +86,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       id: 'assetManager' as UserRole,
       title: 'Asset Manager',
       description: 'Manage inventory, assign assets, review exceptions',
-      demoEmail: 'michael.torres@company.com'
+      demoEmail: 'nadim.mujawar@cencora.com'
     },
     {
       id: 'employee' as UserRole,

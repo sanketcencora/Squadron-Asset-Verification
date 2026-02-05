@@ -18,11 +18,45 @@ import {
   Loader2
 } from 'lucide-react';
 
+// Extended type with parsed arrays
+interface VerificationRecordWithArrays extends VerificationRecord {
+  peripheralsConfirmed: string[];
+  peripheralsNotWithMe: string[];
+}
+
+// Helper function to parse JSON strings to arrays
+const parsePeripherals = (record: VerificationRecord): VerificationRecordWithArrays => {
+  let peripheralsConfirmed: string[] = [];
+  let peripheralsNotWithMe: string[] = [];
+  
+  try {
+    if (record.peripheralsConfirmedJson) {
+      peripheralsConfirmed = JSON.parse(record.peripheralsConfirmedJson);
+    }
+  } catch (e) {
+    console.warn('Failed to parse peripheralsConfirmedJson:', e);
+  }
+  
+  try {
+    if (record.peripheralsNotWithMeJson) {
+      peripheralsNotWithMe = JSON.parse(record.peripheralsNotWithMeJson);
+    }
+  } catch (e) {
+    console.warn('Failed to parse peripheralsNotWithMeJson:', e);
+  }
+  
+  return {
+    ...record,
+    peripheralsConfirmed,
+    peripheralsNotWithMe
+  };
+};
+
 export function VerificationReviewPage() {
-  const [selectedRecord, setSelectedRecord] = useState<VerificationRecord | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<VerificationRecordWithArrays | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [records, setRecords] = useState<VerificationRecord[]>([]);
+  const [records, setRecords] = useState<VerificationRecordWithArrays[]>([]);
   const [stats, setStats] = useState<Record<string, number>>({ total: 0, verified: 0, pending: 0, overdue: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +72,9 @@ export function VerificationReviewPage() {
         api.verifications.getAll(),
         api.verifications.getStats()
       ]);
-      setRecords(recordsData);
+      // Parse the JSON strings to arrays
+      const parsedRecords = recordsData.map(parsePeripherals);
+      setRecords(parsedRecords);
       setStats(statsData);
       setError(null);
     } catch (err) {
@@ -68,8 +104,8 @@ export function VerificationReviewPage() {
       'Reviewed By': record.reviewedBy || 'Pending',
       'Comment': record.comment || 'No comment',
       'Has Image': record.uploadedImage ? 'Yes' : 'No',
-      'Peripherals Confirmed': record.peripheralsConfirmedJson || 'N/A',
-      'Peripherals Not With Me': record.peripheralsNotWithMeJson || 'N/A'
+      'Peripherals Confirmed': record.peripheralsConfirmed.join(', ') || 'N/A',
+      'Peripherals Not With Me': record.peripheralsNotWithMe.join(', ') || 'N/A'
     }));
 
     // Convert to CSV
@@ -112,22 +148,22 @@ export function VerificationReviewPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleAccept = (recordId: string) => {
+  const handleAccept = (recordId: number) => {
     alert(`Verification ${recordId} accepted`);
     setSelectedRecord(null);
   };
 
-  const handleReject = (recordId: string) => {
+  const handleReject = (recordId: number) => {
     alert(`Verification ${recordId} marked as exception`);
     setSelectedRecord(null);
   };
 
-  const handleReassign = (recordId: string) => {
+  const handleReassign = (recordId: number) => {
     alert(`Asset reassignment initiated for ${recordId}`);
     setSelectedRecord(null);
   };
 
-  const handleMarkLost = (recordId: string) => {
+  const handleMarkLost = (recordId: number) => {
     alert(`Asset ${recordId} marked as lost/missing`);
     setSelectedRecord(null);
   };

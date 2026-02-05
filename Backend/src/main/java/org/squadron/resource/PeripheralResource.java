@@ -60,6 +60,24 @@ public class PeripheralResource {
     }
     
     @GET
+    @Path("/instock")
+    public List<Peripheral> getInstock() {
+        return service.findInstock();
+    }
+    
+    @GET
+    @Path("/instock/{type}")
+    public List<Peripheral> getInstockByType(@PathParam("type") PeripheralType type) {
+        return service.findInstockByType(type);
+    }
+    
+    @GET
+    @Path("/stock")
+    public Map<String, Long> getStock() {
+        return service.getStockByType();
+    }
+    
+    @GET
     @Path("/stats")
     public Map<String, Object> getStats() {
         return service.getStats();
@@ -68,6 +86,19 @@ public class PeripheralResource {
     @POST
     public Response create(Peripheral peripheral) {
         Peripheral created = service.create(peripheral);
+        return Response.status(Response.Status.CREATED).entity(created).build();
+    }
+    
+    public static class AddToStockRequest {
+        public PeripheralType type;
+        public String serialNumber;
+        public String location;
+    }
+    
+    @POST
+    @Path("/stock/add")
+    public Response addToStock(AddToStockRequest req) {
+        Peripheral created = service.addToStock(req.type, req.serialNumber, req.location);
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
     
@@ -93,9 +124,26 @@ public class PeripheralResource {
     @POST
     @Path("/assign")
     public Response assign(AssignPeripheralRequest req) {
-        Peripheral created = service.assignToEmployee(req.type, req.serialNumber, 
+        Peripheral assigned = service.assignToEmployee(req.type, req.serialNumber, 
             req.employeeId, req.employeeName);
-        return Response.status(Response.Status.CREATED).entity(created).build();
+        if (assigned == null) {
+            return Response.status(Response.Status.CONFLICT)
+                .entity(Map.of("message", "No stock available for " + req.type))
+                .build();
+        }
+        return Response.status(Response.Status.CREATED).entity(assigned).build();
+    }
+    
+    @POST
+    @Path("/{id}/return")
+    public Response returnToStock(@PathParam("id") Long id) {
+        Peripheral returned = service.returnToStock(id);
+        if (returned == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(Map.of("message", "Peripheral not found"))
+                .build();
+        }
+        return Response.ok(returned).build();
     }
     
     @POST

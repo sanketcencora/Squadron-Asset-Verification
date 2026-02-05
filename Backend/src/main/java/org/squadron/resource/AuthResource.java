@@ -51,10 +51,10 @@ public class AuthResource {
 
         User user = opt.get();
         
-        // Restrict login to finance users only
-        if (!"finance".equals(user.role)) {
+        // Restrict login to finance and assetManager users only
+        if (!"finance".equals(user.role) && !"assetManager".equals(user.role)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(Map.of("message", "Access restricted. Only finance users are allowed to login."))
+                .entity(Map.of("message", "Access restricted. Only finance and asset manager users are allowed to login."))
                 .build();
         }
         
