@@ -1,2 +1,3 @@
 -- This file allow to write SQL commands that will be emitted in test and dev.
 -- Kept empty because users are seeded at application startup with hashed passwords.
+-- Column fixes are now handled in Bootstrap.java

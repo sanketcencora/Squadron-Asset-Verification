@@ -41,4 +41,18 @@ public class VerificationRecordRepository implements PanacheRepository<Verificat
     public long countByCampaignId(Long campaignId) {
         return count("campaign.id", campaignId);
     }
+
+    // Added: pending records for specific campaign
+    public List<VerificationRecord> findPendingByCampaignId(Long campaignId) {
+        return find("campaign.id = ?1 and status = ?2", campaignId, VerificationStatus.Pending).list();
+    }
+
+    // Added: distinct pending employee IDs for campaign
+    public List<String> findDistinctPendingEmployeeIdsByCampaignId(Long campaignId) {
+        return getEntityManager()
+            .createQuery("select distinct vr.employeeId from VerificationRecord vr where vr.campaign.id = :cid and vr.status = :status", String.class)
+            .setParameter("cid", campaignId)
+            .setParameter("status", VerificationStatus.Pending)
+            .getResultList();
+    }
 }

@@ -30,6 +30,7 @@ public class VerificationRecord extends PanacheEntity {
     @Enumerated(EnumType.STRING)
     public VerificationStatus status = VerificationStatus.Pending;
     
+    @Column(columnDefinition = "LONGTEXT")
     public String uploadedImage;
     
     public String recordedServiceTag;
@@ -41,6 +42,7 @@ public class VerificationRecord extends PanacheEntity {
     @Column(columnDefinition = "TEXT")
     public String peripheralsNotWithMeJson;
     
+    @Column(columnDefinition = "TEXT")
     public String comment;
     
     public LocalDateTime submittedDate;

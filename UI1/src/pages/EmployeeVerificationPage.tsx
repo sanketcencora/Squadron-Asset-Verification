@@ -1,67 +1,208 @@
-import { useState } from 'react';
-import { Upload, CheckCircle, Package, AlertCircle, FileText, Camera } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Upload, CheckCircle, Package, AlertCircle, FileText, Camera, Loader2, Scan, XCircle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
-import { PeripheralType } from '@/data/mockData';
+import { publicVerificationApi, VerificationData } from '@/services/api';
 
 interface EmployeeVerificationPageProps {
-  onSubmit: () => void;
+  onSubmit?: () => void;
+}
+
+// OCR verification result for each asset
+interface OcrResult {
+  extractedTag?: string;
+  matches?: boolean;
+  message: string;
+  scanning?: boolean;
 }
 
 export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageProps) {
-  const [step, setStep] = useState<'verify' | 'submitted'>('verify');
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
+  const [step, setStep] = useState<'verify' | 'submitting' | 'submitted'>('verify');
   const [uploadedImages, setUploadedImages] = useState<{ [key: string]: string }>({});
+  const [ocrResults, setOcrResults] = useState<{ [key: string]: OcrResult }>({});
   const [peripheralStatus, setPeripheralStatus] = useState<{
     [key: string]: 'confirmed' | 'notWithMe' | 'pending';
   }>({});
   const [comments, setComments] = useState<{ [key: string]: string }>({});
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [ocrEnabled, setOcrEnabled] = useState(false);
 
-  // Mock assigned assets - in real app, these would come from API
-  const assignedHardware = [
-    {
-      id: 'hw1',
-      serviceTag: 'ST-LT-2024-001',
-      assetType: 'Laptop',
-      model: 'Dell Latitude 5540'
-    },
-    {
-      id: 'hw4',
-      serviceTag: 'ST-MB-2024-004',
-      assetType: 'Mobile',
-      model: 'iPhone 15 Pro'
-    }
-  ];
+  // Fetch verification data on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!token) {
+        setError('No verification token provided. Please use the link from your email.');
+        setLoading(false);
+        return;
+      }
 
-  const assignedPeripherals: PeripheralType[] = ['Charger', 'Headphones', 'Mouse'];
-
-  const handleImageUpload = (assetId: string, file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setUploadedImages({ ...uploadedImages, [assetId]: reader.result as string });
+      try {
+        const data = await publicVerificationApi.getByToken(token);
+        setVerificationData(data);
+        setOcrEnabled((data as any).ocrEnabled || false);
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load verification data');
+        setLoading(false);
+      }
     };
-    reader.readAsDataURL(file);
+
+    fetchData();
+  }, [token]);
+
+  const handleImageUpload = async (assetId: number, file: File, expectedServiceTag: string) => {
+    try {
+      // Show local preview immediately
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const imageData = reader.result as string;
+        setUploadedImages(prev => ({ ...prev, [assetId]: imageData }));
+        
+        // Only run OCR if it was previously enabled, otherwise skip silently
+        if (ocrEnabled) {
+          setOcrResults(prev => ({ ...prev, [assetId]: { scanning: true, message: 'Scanning image...' } }));
+          
+          try {
+            const ocrResult = await publicVerificationApi.extractServiceTag(imageData, expectedServiceTag);
+            if (ocrResult.ocrEnabled) {
+              setOcrResults(prev => ({ 
+                ...prev, 
+                [assetId]: {
+                  extractedTag: ocrResult.extractedTag,
+                  matches: ocrResult.matches,
+                  message: ocrResult.message,
+                  scanning: false
+                }
+              }));
+            } else {
+              // OCR not available - clear any scanning state
+              setOcrResults(prev => {
+                const newResults = { ...prev };
+                delete newResults[assetId];
+                return newResults;
+              });
+              setOcrEnabled(false);
+            }
+          } catch (err) {
+            console.error('OCR failed:', err);
+            // Silently disable OCR on error
+            setOcrResults(prev => {
+              const newResults = { ...prev };
+              delete newResults[assetId];
+              return newResults;
+            });
+            setOcrEnabled(false);
+          }
+        }
+        // Image is uploaded successfully regardless of OCR status
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Failed to upload image:', err);
+    }
   };
 
-  const handlePeripheralStatus = (peripheral: PeripheralType, status: 'confirmed' | 'notWithMe') => {
-    setPeripheralStatus({ ...peripheralStatus, [peripheral]: status });
+  const handlePeripheralStatus = (peripheral: string, status: 'confirmed' | 'notWithMe') => {
+    setPeripheralStatus(prev => ({ ...prev, [peripheral]: status }));
   };
 
-  const handleSubmit = () => {
-    if (!isFormValid()) return;
-    setStep('submitted');
-    setTimeout(() => onSubmit(), 2000);
+  const handleSubmit = async () => {
+    if (!token || !verificationData || !isFormValid()) return;
+    
+    setStep('submitting');
+    setSubmitError(null);
+
+    try {
+      // Submit verification for each asset
+      for (const asset of verificationData.assets) {
+        const assetPeripherals = asset.peripherals || [];
+        const confirmedPeripherals = assetPeripherals.filter(p => peripheralStatus[p] === 'confirmed');
+        const notWithMePeripherals = assetPeripherals.filter(p => peripheralStatus[p] === 'notWithMe');
+        
+        // Build comment from peripheral issues
+        const commentParts: string[] = [];
+        notWithMePeripherals.forEach(p => {
+          if (comments[p]) {
+            commentParts.push(`${p}: ${comments[p]}`);
+          }
+        });
+
+        await publicVerificationApi.submitAsset(token, {
+          assetId: asset.id,
+          recordedServiceTag: asset.serviceTag, // User confirms this is correct
+          uploadedImage: uploadedImages[asset.id] || '',
+          peripheralsConfirmed: confirmedPeripherals,
+          peripheralsNotWithMe: notWithMePeripherals,
+          comment: commentParts.join('; '),
+        });
+      }
+
+      // Mark verification as complete
+      await publicVerificationApi.complete(token);
+      
+      setStep('submitted');
+      if (onSubmit) {
+        setTimeout(onSubmit, 2000);
+      }
+    } catch (err: any) {
+      setSubmitError(err.message || 'Failed to submit verification');
+      setStep('verify');
+    }
   };
 
   const isFormValid = () => {
+    if (!verificationData) return false;
+    
     // Check all hardware has images
-    const allHardwareVerified = assignedHardware.every(hw => uploadedImages[hw.id]);
+    const allHardwareVerified = verificationData.assets.every(asset => uploadedImages[asset.id]);
+    
     // Check all peripherals have status
-    const allPeripheralsVerified = assignedPeripherals.every(
+    const allPeripherals = verificationData.allPeripherals || [];
+    const allPeripheralsVerified = allPeripherals.every(
       p => peripheralStatus[p] === 'confirmed' || peripheralStatus[p] === 'notWithMe'
     );
+    
     return allHardwareVerified && allPeripheralsVerified && declarationAccepted;
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-[#461e96] animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading verification data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !verificationData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-12 h-12 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Verification Error</h1>
+          <p className="text-gray-600 mb-6">{error || 'Unable to load verification data'}</p>
+          <p className="text-sm text-gray-500">
+            If you believe this is an error, please contact your Asset Manager.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Submitted state
   if (step === 'submitted') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-[#f2effa] flex items-center justify-center p-4">
@@ -75,9 +216,22 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
           </p>
           <div className="p-4 bg-[#f2effa] border border-[#e3dcf7] rounded-lg text-sm text-[#461e96]">
             <p className="font-medium mb-1">Submission Confirmation</p>
-            <p>Reference ID: VER-{Date.now()}</p>
+            <p>Campaign: {verificationData.campaignName}</p>
+            <p>Employee: {verificationData.employeeName}</p>
             <p>Date: {new Date().toLocaleString()}</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Submitting state
+  if (step === 'submitting') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-[#461e96] animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Submitting your verification...</p>
         </div>
       </div>
     );
@@ -87,11 +241,17 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
     <div className="min-h-screen bg-gray-50">
       {/* Simple Header - No Internal Navigation */}
       <div className="bg-white border-b border-gray-200 py-4 px-6">
-        <div className="max-w-4xl mx-auto flex items-center space-x-3">
-          <Logo className="h-8 w-auto" />
-          <div>
-            <h1 className="font-semibold text-gray-900">Asset Verification System</h1>
-            <p className="text-sm text-gray-600">Annual Audit Compliance</p>
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Logo className="h-8 w-auto" />
+            <div>
+              <h1 className="font-semibold text-gray-900">Asset Verification System</h1>
+              <p className="text-sm text-gray-600">{verificationData.campaignName}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-medium text-gray-900">{verificationData.employeeName}</p>
+            <p className="text-xs text-gray-500">{verificationData.employeeEmail}</p>
           </div>
         </div>
       </div>
@@ -102,10 +262,15 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Your Asset Verification</h2>
           <p className="text-gray-600 mb-4">
-            As part of our annual audit process, please verify all hardware and peripherals assigned to you.
+            As part of the <strong>{verificationData.campaignName}</strong>, please verify all hardware and peripherals assigned to you.
             This process typically takes 3-5 minutes.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {verificationData.deadline && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+              <strong>Deadline:</strong> {new Date(verificationData.deadline).toLocaleDateString()}
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="flex items-start space-x-3 p-3 bg-[#f2effa] rounded-lg">
               <Camera className="w-5 h-5 text-[#461e96] mt-0.5" />
               <div>
@@ -143,7 +308,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
           </div>
 
           <div className="space-y-4">
-            {assignedHardware.map((asset) => (
+            {verificationData.assets.map((asset) => (
               <div key={asset.id} className="border border-gray-200 rounded-lg p-5">
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -200,7 +365,7 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
                         className="hidden"
                         onChange={(e) => {
                           if (e.target.files && e.target.files[0]) {
-                            handleImageUpload(asset.id, e.target.files[0]);
+                            handleImageUpload(asset.id, e.target.files[0], asset.serviceTag);
                           }
                         }}
                       />
@@ -210,93 +375,148 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
                     </p>
                   </div>
                 )}
+                
+                {/* OCR Result Display - only show if OCR is enabled and has results */}
+                {ocrEnabled && ocrResults[asset.id] && (
+                  <div className={`mt-3 p-3 rounded-lg border ${
+                    ocrResults[asset.id].scanning 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : ocrResults[asset.id].matches 
+                        ? 'bg-green-50 border-green-200' 
+                        : ocrResults[asset.id].extractedTag 
+                          ? 'bg-red-50 border-red-200'
+                          : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <div className="flex items-center space-x-2">
+                      {ocrResults[asset.id].scanning ? (
+                        <>
+                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                          <span className="text-sm text-blue-700">Scanning image for service tag...</span>
+                        </>
+                      ) : ocrResults[asset.id].matches ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <span className="text-sm text-green-700">
+                            ✓ Service tag verified: <span className="font-mono font-medium">{ocrResults[asset.id].extractedTag}</span>
+                          </span>
+                        </>
+                      ) : ocrResults[asset.id].extractedTag ? (
+                        <>
+                          <XCircle className="w-4 h-4 text-red-600" />
+                          <span className="text-sm text-red-700">
+                            ⚠ Mismatch: Found <span className="font-mono font-medium">{ocrResults[asset.id].extractedTag}</span>, expected <span className="font-mono font-medium">{asset.serviceTag}</span>
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Scan className="w-4 h-4 text-gray-600" />
+                          <span className="text-sm text-gray-600">{ocrResults[asset.id].message}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
         {/* Section B: Assigned Peripherals */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+        {verificationData.allPeripherals.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Assigned Peripherals</h3>
+                <p className="text-sm text-gray-600">Confirm each peripheral currently in your possession</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Assigned Peripherals</h3>
-              <p className="text-sm text-gray-600">Confirm each peripheral currently in your possession</p>
-            </div>
-          </div>
 
-          <div className="space-y-3">
-            {assignedPeripherals.map((peripheral) => {
-              const status = peripheralStatus[peripheral];
-              return (
-                <div key={peripheral} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
+            <div className="space-y-3">
+              {verificationData.allPeripherals.map((peripheral) => {
+                const status = peripheralStatus[peripheral];
+                return (
+                  <div key={peripheral} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <Package className="w-5 h-5 text-gray-600" />
+                        <span className="font-medium text-gray-900">{peripheral}</span>
+                      </div>
+                      {status === 'confirmed' && (
+                        <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">
+                          Confirmed
+                        </span>
+                      )}
+                      {status === 'notWithMe' && (
+                        <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full font-medium">
+                          Not With Me
+                        </span>
+                      )}
+                    </div>
+
                     <div className="flex items-center space-x-3">
-                      <Package className="w-5 h-5 text-gray-600" />
-                      <span className="font-medium text-gray-900">{peripheral}</span>
+                      <button
+                        onClick={() => handlePeripheralStatus(peripheral, 'confirmed')}
+                        className={`flex-1 px-4 py-2.5 rounded-lg border-2 font-medium transition-colors ${
+                          status === 'confirmed'
+                            ? 'border-green-500 bg-green-50 text-green-700'
+                            : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <CheckCircle className="w-4 h-4 inline mr-2" />
+                        I have this
+                      </button>
+                      <button
+                        onClick={() => handlePeripheralStatus(peripheral, 'notWithMe')}
+                        className={`flex-1 px-4 py-2.5 rounded-lg border-2 font-medium transition-colors ${
+                          status === 'notWithMe'
+                            ? 'border-orange-500 bg-orange-50 text-orange-700'
+                            : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <AlertCircle className="w-4 h-4 inline mr-2" />
+                        Not with me
+                      </button>
                     </div>
-                    {status === 'confirmed' && (
-                      <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">
-                        Confirmed
-                      </span>
-                    )}
+
                     {status === 'notWithMe' && (
-                      <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full font-medium">
-                        Not With Me
-                      </span>
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Please explain (required)
+                        </label>
+                        <textarea
+                          value={comments[peripheral] || ''}
+                          onChange={(e) => setComments(prev => ({ ...prev, [peripheral]: e.target.value }))}
+                          placeholder="e.g., Lost, returned to IT, never received..."
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
                     )}
                   </div>
-
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => handlePeripheralStatus(peripheral, 'confirmed')}
-                      className={`flex-1 px-4 py-2.5 rounded-lg border-2 font-medium transition-colors ${
-                        status === 'confirmed'
-                          ? 'border-green-500 bg-green-50 text-green-700'
-                          : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      <CheckCircle className="w-4 h-4 inline mr-2" />
-                      I have this
-                    </button>
-                    <button
-                      onClick={() => handlePeripheralStatus(peripheral, 'notWithMe')}
-                      className={`flex-1 px-4 py-2.5 rounded-lg border-2 font-medium transition-colors ${
-                        status === 'notWithMe'
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
-                          : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      <AlertCircle className="w-4 h-4 inline mr-2" />
-                      Not with me
-                    </button>
-                  </div>
-
-                  {status === 'notWithMe' && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Please explain (required)
-                      </label>
-                      <textarea
-                        value={comments[peripheral] || ''}
-                        onChange={(e) => setComments({ ...comments, [peripheral]: e.target.value })}
-                        placeholder="e.g., Lost, returned to IT, never received..."
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Section C: Declaration & Submit */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Declaration & Submission</h3>
+
+          {submitError && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="text-sm text-red-900">
+                  <p className="font-medium">Submission Failed</p>
+                  <p>{submitError}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
             <div className="flex items-start space-x-3">
@@ -342,10 +562,10 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
                 <strong>Please complete all required fields:</strong>
               </p>
               <ul className="text-sm text-red-700 mt-2 space-y-1 ml-4 list-disc">
-                {assignedHardware.some(hw => !uploadedImages[hw.id]) && (
+                {verificationData.assets.some(asset => !uploadedImages[asset.id]) && (
                   <li>Upload images for all hardware assets</li>
                 )}
-                {assignedPeripherals.some(p => !peripheralStatus[p]) && (
+                {verificationData.allPeripherals.some(p => !peripheralStatus[p]) && (
                   <li>Confirm status for all peripherals</li>
                 )}
                 {!declarationAccepted && (

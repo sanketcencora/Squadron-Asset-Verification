@@ -7,7 +7,9 @@ import org.squadron.repository.UserRepository;
 import org.mindrot.jbcrypt.BCrypt;
 import jakarta.transaction.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 
 @ApplicationScoped
 public class UserService {
@@ -27,8 +29,19 @@ public class UserService {
         return Optional.ofNullable(userRepository.findById(id));
     }
 
-    public java.util.List<User> findAll() {
+    public List<User> findAll() {
         return userRepository.listAll();
+    }
+    
+    public List<User> findByDepartment(String department) {
+        return userRepository.findByDepartment(department);
+    }
+    
+    public List<User> findByDepartments(List<String> departments) {
+        if (departments == null || departments.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return userRepository.findByDepartments(departments);
     }
 
     public Optional<User> authenticate(String username, String password) {

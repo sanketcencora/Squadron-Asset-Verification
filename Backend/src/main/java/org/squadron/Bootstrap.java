@@ -2,6 +2,7 @@ package org.squadron;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.squadron.service.UserService;
 import org.squadron.service.HardwareAssetService;
@@ -37,15 +38,33 @@ public class Bootstrap {
     
     @Inject
     EquipmentService equipmentService;
+    
+    @Inject
+    EntityManager entityManager;
 
     @Transactional
     void onStart(@Observes StartupEvent ev) {
+        // Fix column sizes for large data (base64 images)
+        fixColumnSizes();
+        
         seedUsers();
         seedHardwareAssets();
         seedPeripherals();
         // seedCampaigns(); // Disabled - only show user-created campaigns
         seedEquipment();
         System.out.println("[Bootstrap] Database seeded successfully!");
+    }
+    
+    private void fixColumnSizes() {
+        try {
+            // Alter columns to support large base64 images
+            entityManager.createNativeQuery("ALTER TABLE verification_records MODIFY COLUMN uploadedImage LONGTEXT").executeUpdate();
+            entityManager.createNativeQuery("ALTER TABLE verification_records MODIFY COLUMN comment TEXT").executeUpdate();
+            System.out.println("[Bootstrap] Column sizes fixed for verification_records");
+        } catch (Exception e) {
+            // Table might not exist yet or columns already correct - ignore
+            System.out.println("[Bootstrap] Column fix skipped: " + e.getMessage());
+        }
     }
     
     private void seedUsers() {
@@ -66,7 +85,7 @@ public class Bootstrap {
         }
         if (userService.findByUsername("kamlesh.badade").isEmpty()) {
             userService.registerFull("kamlesh.badade", "password", "employee", "Kamlesh Badade",
-                "kamleshbhausaheb.badade@cencora.com", "555-0104", "eCommerce & Portal", "a157196");
+                "sanketdisale870@gmail.com", "555-0104", "eCommerce & Portal", "a157196");
         }
         if (userService.findByUsername("nitin.krishna").isEmpty()) {
             userService.registerFull("nitin.krishna", "password", "employee", "Nitin Krishna",
@@ -90,7 +109,7 @@ public class Bootstrap {
         }
         if (userService.findByUsername("rajas.nandgaonkar").isEmpty()) {
             userService.registerFull("rajas.nandgaonkar", "password", "employee", "Rajas Nandgaonkar",
-                "rajassuhas.nandgaonkar@cencora.com", "555-0105", "Alliance IT BusApps", "a157279");
+                "rajas.nandgaonkar01@gmail.com", "555-0105", "Alliance IT BusApps", "a157279");
         }
         if (userService.findByUsername("anmol.shukla").isEmpty()) {
             userService.registerFull("anmol.shukla", "password", "employee", "Anmol Shukla",

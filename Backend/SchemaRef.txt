@@ -1,3 +1,17 @@
+storage account:
+- upload document, access from anywhere
+- Building and customer roles
+- How the roles workds as well..
+
+
+- Key-vault
+- come with 2-3 roles, 
+
+
+POC--> Asset owner 
+
+
+
 User: 
 
 - EmpID
@@ -124,3 +138,73 @@ Finance Team:
 	- Pending 
 	- Overdue 
 	- Progress (%)
+
+
+
+- Asset ->> Team  (Workplace, IT)
+- Asset Mg. -> Asset rel. to his Team
+
+
+Master Admin/Auditor -> See every. fliters in place 
+
+Revant, Nadeem
+
+
+
+
+
+Website Dashboard: 
+
+--> L1 -> InStock -> 1-01-2026
+--> L1 -> Assign -> 01-02-2026
+
+
+PowerBI Dashboard:Filter
+
+Exce:l1 -> InStong 
+
+AND
+Remove the "High-Value Assets Only" field.
+ 
+Q4 2024 Annual Audit
+Completed
+Deadline Passed
+Annual hardware and peripheral verification for audit compliance
+
+
+Assets Q1 2025
+Completed
+Deadline Passed
+Verification of assets valued over $1000
+
+
+Field for 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

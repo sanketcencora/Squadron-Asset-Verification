@@ -620,6 +620,107 @@ export const usersApi = {
   },
 };
 
+// Public Verification API (for employee verification via email link)
+export interface VerificationData {
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  campaignId: number;
+  campaignName: string;
+  deadline: string | null;
+  assets: Array<{
+    id: number;
+    serviceTag: string;
+    assetType: AssetType;
+    model: string;
+    verificationStatus: VerificationStatus;
+    peripherals: string[];
+  }>;
+  allPeripherals: string[];
+  expiresAt: string;
+}
+
+export const publicVerificationApi = {
+  // Get verification data by token (from email link)
+  getByToken: async (token: string): Promise<VerificationData> => {
+    return fetchApi<VerificationData>(`/public/verify/${token}`);
+  },
+
+  // Submit verification for a single asset
+  submitAsset: async (token: string, data: {
+    assetId: number;
+    recordedServiceTag: string;
+    uploadedImage: string;
+    peripheralsConfirmed: string[];
+    peripheralsNotWithMe: string[];
+    comment?: string;
+  }): Promise<{ 
+    message: string; 
+    status: VerificationStatus; 
+    recordId: number;
+    ocrEnabled?: boolean;
+    extractedServiceTag?: string;
+    ocrMatch?: boolean;
+    ocrMessage?: string;
+  }> => {
+    return fetchApi(`/public/verify/${token}/submit`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Extract service tag from image using OCR
+  extractServiceTag: async (imageData: string, expectedTag?: string): Promise<{
+    ocrEnabled: boolean;
+    extractedTag?: string;
+    expectedTag?: string;
+    matches?: boolean;
+    found?: boolean;
+    message: string;
+  }> => {
+    return fetchApi('/public/verify/ocr/extract', {
+      method: 'POST',
+      body: JSON.stringify({ imageData, expectedTag }),
+    });
+  },
+
+  // Complete all verifications (marks token as used)
+  complete: async (token: string): Promise<{ message: string; submittedAt: string }> => {
+    return fetchApi(`/public/verify/${token}/complete`, {
+      method: 'POST',
+    });
+  },
+
+  // Upload image (returns URL)
+  uploadImage: async (file: File, assetId?: string): Promise<{ url: string; filename: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (assetId) {
+      formData.append('assetId', assetId);
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/public/upload/image`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.message);
+    }
+    
+    return response.json();
+  },
+
+  // Upload base64 image
+  uploadImageBase64: async (imageData: string, assetId?: string): Promise<{ url: string; filename: string }> => {
+    return fetchApi('/public/upload/image-base64', {
+      method: 'POST',
+      body: JSON.stringify({ imageData, assetId }),
+    });
+  },
+};
+
 // Export all APIs as a single object for convenience
 export const api = {
   auth: authApi,
@@ -629,6 +730,7 @@ export const api = {
   verifications: verificationsApi,
   equipment: equipmentApi,
   users: usersApi,
+  publicVerification: publicVerificationApi,
 };
 
 export default api;

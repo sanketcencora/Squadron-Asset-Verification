@@ -59,9 +59,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       location: 'Pune',
       team: sessionStorage.getItem('currentUserDepartment') || '',
       employeeId: currentUserId,
-      lastVerifiedDate: null,
-      assignedAssets: []
-    } : null) || mockUsers.find(u => u.id === currentUserId);
+      lastVerifiedDate: undefined,
+      assignedAssets: [] as string[]
+    } : null) || mockUsers.find(u => u.id === currentUserId) || null;
 
   const login = (role: UserRole, userId: string) => {
     setCurrentRole(role);
@@ -598,6 +598,12 @@ export default function App() {
                 </AppLayout>
               </ProtectedRoute>
             }
+          />
+          
+          {/* Public verification page (accessed via email link) */}
+          <Route
+            path="/verify"
+            element={<EmployeeVerificationPage />}
           />
           
           {/* Default redirect */}

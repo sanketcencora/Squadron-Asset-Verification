@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Calendar, Users, Package, CheckCircle, Clock, AlertTriangle, XCircle, Search, Filter, X, Mail, FileText, RefreshCw, Trash2 } from 'lucide-react';
+import { Plus, Calendar, Users, Package, CheckCircle, Clock, AlertTriangle, XCircle, Search, Filter, X, Mail, FileText, RefreshCw, Trash2, Loader2, Send } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { api, Campaign } from '@/services/api';
 
@@ -15,6 +15,106 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [launchingId, setLaunchingId] = useState<number | null>(null);
+  const [launchResult, setLaunchResult] = useState<{
+    campaignId: number; 
+    emailsSent: number; 
+    total: number;
+    verificationLinks?: Array<{employeeName: string; employeeEmail: string; verificationUrl: string}>;
+  } | null>(null);
+  const [sendingReminders, setSendingReminders] = useState(false);
+  const [reminderResult, setReminderResult] = useState<{sent: number; total: number} | null>(null);
+
+  // Launch campaign and send emails
+  const handleLaunchWithEmails = async (campaignId: number) => {
+    setLaunchingId(campaignId);
+    try {
+      const response = await fetch(`http://localhost:8080/api/campaigns/${campaignId}/launch-with-emails`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to launch campaign');
+      }
+      
+      const result = await response.json();
+      setLaunchResult({
+        campaignId,
+        emailsSent: result.emailsSent,
+        total: result.totalEmployees,
+        verificationLinks: result.verificationLinks || [],
+      });
+      
+      // Refresh campaigns to get updated status
+      fetchCampaigns();
+      
+    } catch (err: any) {
+      console.error('Failed to launch campaign:', err);
+      alert(`Failed to launch campaign: ${err.message}`);
+    } finally {
+      setLaunchingId(null);
+    }
+  };
+
+  // Send reminders handler
+  const handleSendReminders = async (campaignId: number) => {
+    setSendingReminders(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/campaigns/${campaignId}/send-reminders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send reminders');
+      }
+      
+      const result = await response.json();
+      setReminderResult({
+        sent: result.remindersSent || 0,
+        total: result.totalPending || 0,
+      });
+      
+    } catch (err: any) {
+      console.error('Failed to send reminders:', err);
+      alert(`Failed to send reminders: ${err.message}`);
+    } finally {
+      setSendingReminders(false);
+    }
+  };
+
+  // Export campaign report handler
+  const handleExportReport = (campaign: Campaign) => {
+    // Build CSV content
+    const headers = ['Campaign Name', 'Status', 'Start Date', 'Deadline', 'Total Employees', 'Total Assets', 'Verified', 'Pending', 'Exceptions'];
+    const row = [
+      campaign.name,
+      getEffectiveStatus(campaign),
+      campaign.startDate,
+      campaign.deadline,
+      campaign.totalEmployees || 0,
+      campaign.totalAssets || 0,
+      campaign.verifiedCount || 0,
+      campaign.pendingCount || 0,
+      campaign.exceptionCount || 0,
+    ];
+    
+    const csvContent = [headers.join(','), row.join(',')].join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${campaign.name.replace(/\s+/g, '_')}_report.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Delete campaign handler
   const handleDeleteCampaign = async (campaignId: number, campaignName: string) => {
@@ -485,11 +585,46 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
             {/* Modal Footer */}
             <div className="p-6 border-t border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                  <Mail className="w-4 h-4" />
-                  <span>Send Reminders</span>
+                {getEffectiveStatus(selectedCampaign) === 'Draft' && (
+                  <button 
+                    onClick={() => handleLaunchWithEmails(selectedCampaign.id)}
+                    disabled={launchingId === selectedCampaign.id}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {launchingId === selectedCampaign.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Launching...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Launch & Send Emails</span>
+                      </>
+                    )}
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleSendReminders(selectedCampaign.id)}
+                  disabled={sendingReminders || selectedCampaign.status === 'Draft'}
+                  className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sendingReminders ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sending...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4" />
+                      <span>Send Reminders</span>
+                    </>
+                  )}
                 </button>
-                <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                <button 
+                  onClick={() => handleExportReport(selectedCampaign)}
+                  className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
                   <FileText className="w-4 h-4" />
                   <span>Export Report</span>
                 </button>
@@ -511,6 +646,85 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Launch Success Modal */}
+      {launchResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-10 h-10 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Campaign Launched!</h3>
+              <p className="text-gray-600 mb-4">
+                Verification requests created for {launchResult.emailsSent} of {launchResult.total} employees.
+              </p>
+            </div>
+            
+            {/* Verification Links */}
+            {launchResult.verificationLinks && launchResult.verificationLinks.length > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">📧 Verification Links (click to test):</h4>
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {launchResult.verificationLinks.map((link, idx) => (
+                    <div key={idx} className="bg-gray-50 rounded-lg p-3 text-left">
+                      <p className="text-sm font-medium text-gray-800">{link.employeeName}</p>
+                      <p className="text-xs text-gray-500 mb-2">{link.employeeEmail}</p>
+                      <a 
+                        href={link.verificationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:text-blue-800 underline break-all"
+                      >
+                        Open Verification Form →
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setLaunchResult(null)}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reminder Success Modal */}
+      {reminderResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-10 h-10 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Reminders Sent!</h3>
+            <p className="text-gray-600 mb-4">
+              {reminderResult.total > 0
+                ? `Reminder emails have been sent to ${reminderResult.sent} employees with pending verifications.`
+                : reminderResult.sent > 0
+                  ? `Invitations have been sent to ${reminderResult.sent} employees with pending verification records for this campaign.`
+                  : 'No pending verifications found for this campaign.'}
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              {reminderResult.sent === 0
+                ? 'No pending verifications found for this campaign.'
+                : 'Employees will receive a reminder to complete their asset verification.'}
+            </p>
+            <button
+              onClick={() => setReminderResult(null)}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}

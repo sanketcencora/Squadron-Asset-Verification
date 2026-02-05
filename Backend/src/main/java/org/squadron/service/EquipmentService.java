@@ -14,6 +14,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import org.squadron.repository.VerificationRecordRepository;
+import org.squadron.model.VerificationRecord;
+import org.squadron.repository.UserRepository;
+import org.squadron.model.User;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class EquipmentService {
@@ -21,6 +26,13 @@ public class EquipmentService {
     @Inject
     EquipmentCountRepository repository;
     
+    // Added: repositories to map pending employees by campaign
+    @Inject
+    VerificationRecordRepository verificationRecordRepository;
+
+    @Inject
+    UserRepository userRepository;
+
     public List<EquipmentCount> findAll() {
         return repository.listAll();
     }
@@ -157,5 +169,28 @@ public class EquipmentService {
             .filter(e -> e.itemValue != null)
             .map(e -> e.itemValue)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // Added: functions to support mapping of pending employees for current campaign
+    public List<VerificationRecord> findPendingVerificationRecordsByCampaign(Long campaignId) {
+        return verificationRecordRepository.findPendingByCampaignId(campaignId);
+    }
+
+    public List<String> findPendingEmployeeIdsByCampaign(Long campaignId) {
+        return verificationRecordRepository.findDistinctPendingEmployeeIdsByCampaignId(campaignId);
+    }
+
+    public List<User> findPendingEmployeesByCampaign(Long campaignId) {
+        List<String> employeeIds = findPendingEmployeeIdsByCampaign(campaignId);
+        return employeeIds.stream()
+            .map(userRepository::findByEmployeeId)
+            .filter(u -> u != null)
+            .collect(Collectors.toList());
+    }
+
+    public Map<String, Long> getPendingCountByEmployeeForCampaign(Long campaignId) {
+        List<VerificationRecord> pending = findPendingVerificationRecordsByCampaign(campaignId);
+        return pending.stream()
+            .collect(Collectors.groupingBy(vr -> vr.employeeId, Collectors.counting()));
     }
 }
