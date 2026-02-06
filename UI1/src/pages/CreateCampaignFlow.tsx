@@ -69,7 +69,7 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
       };
 
       // Create campaign via API
-      await api.campaigns.create({
+      const createdCampaign = await api.campaigns.create({
         name: campaignData.name,
         description: campaignData.description,
         createdBy: 'FIN001', // Current user's employee ID
@@ -81,10 +81,19 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
         filtersJson: JSON.stringify(filters)
       });
 
+      // Launch campaign and send emails to employees
+      try {
+        const launchResult = await api.campaigns.launchWithEmails(createdCampaign.id);
+        console.log(`Campaign launched! Emails sent to ${launchResult.emailsSent} of ${launchResult.totalEmployees} employees`);
+      } catch (launchErr) {
+        console.warn('Campaign created but email sending failed:', launchErr);
+        // Campaign was created, so still complete but show warning
+      }
+
       onComplete();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create campaign:', err);
-      setError('Failed to create campaign. Please try again.');
+      setError(err?.message || 'Failed to create campaign. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

@@ -5,7 +5,8 @@ export const API_BASE_URL = (import.meta as any)?.env?.VITE_API_BASE_URL || 'htt
 // Generic fetch wrapper with error handling
 async function fetchApi<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  timeoutMs: number = 3000
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
@@ -17,9 +18,8 @@ async function fetchApi<T>(
     },
   };
 
-  // Add a short timeout to avoid hanging UI when backend is down
+  // Add a timeout to avoid hanging UI when backend is down
   const controller = new AbortController();
-  const timeoutMs = 3000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -421,6 +421,11 @@ export const campaignsApi = {
 
   launch: async (id: number): Promise<Campaign> => {
     return fetchApi<Campaign>(`/campaigns/${id}/launch`, { method: 'POST' });
+  },
+
+  launchWithEmails: async (id: number): Promise<{ campaign: Campaign; emailsSent: number; totalEmployees: number; verificationLinks: Array<{ employeeId: string; employeeName: string; employeeEmail: string; verificationUrl: string }> }> => {
+    // Use longer timeout (30 seconds) for email operations
+    return fetchApi(`/campaigns/${id}/launch-with-emails`, { method: 'POST' }, 30000);
   },
 
   complete: async (id: number): Promise<Campaign> => {

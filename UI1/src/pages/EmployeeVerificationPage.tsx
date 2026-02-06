@@ -65,43 +65,34 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
         const imageData = reader.result as string;
         setUploadedImages(prev => ({ ...prev, [assetId]: imageData }));
         
-        // Only run OCR if it was previously enabled, otherwise skip silently
-        if (ocrEnabled) {
-          setOcrResults(prev => ({ ...prev, [assetId]: { scanning: true, message: 'Scanning image...' } }));
-          
-          try {
-            const ocrResult = await publicVerificationApi.extractServiceTag(imageData, expectedServiceTag);
-            if (ocrResult.ocrEnabled) {
-              setOcrResults(prev => ({ 
-                ...prev, 
-                [assetId]: {
-                  extractedTag: ocrResult.extractedTag,
-                  matches: ocrResult.matches,
-                  message: ocrResult.message,
-                  scanning: false
-                }
-              }));
-            } else {
-              // OCR not available - clear any scanning state
-              setOcrResults(prev => {
-                const newResults = { ...prev };
-                delete newResults[assetId];
-                return newResults;
-              });
-              setOcrEnabled(false);
+        // ALWAYS run OCR verification - it's mandatory
+        setOcrResults(prev => ({ ...prev, [assetId]: { scanning: true, message: 'Verifying service tag...' } }));
+        
+        try {
+          const ocrResult = await publicVerificationApi.extractServiceTag(imageData, expectedServiceTag);
+          setOcrResults(prev => ({ 
+            ...prev, 
+            [assetId]: {
+              extractedTag: ocrResult.extractedTag,
+              matches: ocrResult.matches,
+              message: ocrResult.message,
+              scanning: false
             }
-          } catch (err) {
-            console.error('OCR failed:', err);
-            // Silently disable OCR on error
-            setOcrResults(prev => {
-              const newResults = { ...prev };
-              delete newResults[assetId];
-              return newResults;
-            });
-            setOcrEnabled(false);
-          }
+          }));
+          setOcrEnabled(true);
+        } catch (err) {
+          console.error('OCR verification failed:', err);
+          // Mark as failed verification
+          setOcrResults(prev => ({ 
+            ...prev, 
+            [assetId]: {
+              extractedTag: undefined,
+              matches: false,
+              message: 'Could not verify service tag. Please upload a clearer image.',
+              scanning: false
+            }
+          }));
         }
-        // Image is uploaded successfully regardless of OCR status
       };
       reader.readAsDataURL(file);
     } catch (err) {
@@ -163,13 +154,55 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
     // Check all hardware has images
     const allHardwareVerified = verificationData.assets.every(asset => uploadedImages[asset.id]);
     
+    // Check all hardware has passed OCR verification (service tag must match)
+    const allOcrVerified = verificationData.assets.every(asset => {
+      const ocrResult = ocrResults[asset.id];
+      return ocrResult && ocrResult.matches === true && !ocrResult.scanning;
+    });
+    
     // Check all peripherals have status
     const allPeripherals = verificationData.allPeripherals || [];
     const allPeripheralsVerified = allPeripherals.every(
       p => peripheralStatus[p] === 'confirmed' || peripheralStatus[p] === 'notWithMe'
     );
     
-    return allHardwareVerified && allPeripheralsVerified && declarationAccepted;
+    return allHardwareVerified && allOcrVerified && allPeripheralsVerified && declarationAccepted;
+  };
+  
+  // Get validation status message
+  const getValidationMessage = () => {
+    if (!verificationData) return '';
+    
+    const missingImages = verificationData.assets.filter(asset => !uploadedImages[asset.id]);
+    if (missingImages.length > 0) {
+      return `Please upload images for all ${missingImages.length} asset(s)`;
+    }
+    
+    const failedOcr = verificationData.assets.filter(asset => {
+      const ocrResult = ocrResults[asset.id];
+      return !ocrResult || ocrResult.matches !== true || ocrResult.scanning;
+    });
+    if (failedOcr.length > 0) {
+      const scanning = failedOcr.filter(a => ocrResults[a.id]?.scanning);
+      if (scanning.length > 0) {
+        return 'Verifying service tags...';
+      }
+      return `Service tag verification failed for ${failedOcr.length} asset(s). Please upload clearer images.`;
+    }
+    
+    const allPeripherals = verificationData.allPeripherals || [];
+    const pendingPeripherals = allPeripherals.filter(
+      p => peripheralStatus[p] !== 'confirmed' && peripheralStatus[p] !== 'notWithMe'
+    );
+    if (pendingPeripherals.length > 0) {
+      return `Please confirm status for ${pendingPeripherals.length} peripheral(s)`;
+    }
+    
+    if (!declarationAccepted) {
+      return 'Please accept the declaration to submit';
+    }
+    
+    return '';
   };
 
   // Loading state
@@ -376,22 +409,20 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
                   </div>
                 )}
                 
-                {/* OCR Result Display - only show if OCR is enabled and has results */}
-                {ocrEnabled && ocrResults[asset.id] && (
+                {/* OCR Result Display - ALWAYS show for verification status */}
+                {ocrResults[asset.id] && (
                   <div className={`mt-3 p-3 rounded-lg border ${
                     ocrResults[asset.id].scanning 
                       ? 'bg-blue-50 border-blue-200' 
                       : ocrResults[asset.id].matches 
                         ? 'bg-green-50 border-green-200' 
-                        : ocrResults[asset.id].extractedTag 
-                          ? 'bg-red-50 border-red-200'
-                          : 'bg-gray-50 border-gray-200'
+                        : 'bg-red-50 border-red-200'
                   }`}>
                     <div className="flex items-center space-x-2">
                       {ocrResults[asset.id].scanning ? (
                         <>
                           <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                          <span className="text-sm text-blue-700">Scanning image for service tag...</span>
+                          <span className="text-sm text-blue-700">Verifying service tag from image...</span>
                         </>
                       ) : ocrResults[asset.id].matches ? (
                         <>
@@ -404,13 +435,15 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
                         <>
                           <XCircle className="w-4 h-4 text-red-600" />
                           <span className="text-sm text-red-700">
-                            ⚠ Mismatch: Found <span className="font-mono font-medium">{ocrResults[asset.id].extractedTag}</span>, expected <span className="font-mono font-medium">{asset.serviceTag}</span>
+                            ✗ Mismatch: Found <span className="font-mono font-medium">{ocrResults[asset.id].extractedTag}</span>, expected <span className="font-mono font-medium">{asset.serviceTag}</span>. Please upload a correct image.
                           </span>
                         </>
                       ) : (
                         <>
-                          <Scan className="w-4 h-4 text-gray-600" />
-                          <span className="text-sm text-gray-600">{ocrResults[asset.id].message}</span>
+                          <XCircle className="w-4 h-4 text-red-600" />
+                          <span className="text-sm text-red-700">
+                            ✗ Could not read service tag from image. Please upload a clearer photo showing the service tag.
+                          </span>
                         </>
                       )}
                     </div>
@@ -558,12 +591,19 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
 
           {!isFormValid() && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800">
-                <strong>Please complete all required fields:</strong>
+              <p className="text-sm text-red-800 flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4" />
+                <span>{getValidationMessage()}</span>
               </p>
               <ul className="text-sm text-red-700 mt-2 space-y-1 ml-4 list-disc">
                 {verificationData.assets.some(asset => !uploadedImages[asset.id]) && (
                   <li>Upload images for all hardware assets</li>
+                )}
+                {verificationData.assets.some(asset => {
+                  const ocr = ocrResults[asset.id];
+                  return uploadedImages[asset.id] && (!ocr || ocr.matches !== true);
+                }) && (
+                  <li><strong>Service tag verification failed</strong> - please upload clearer images showing the service tag</li>
                 )}
                 {verificationData.allPeripherals.some(p => !peripheralStatus[p]) && (
                   <li>Confirm status for all peripherals</li>

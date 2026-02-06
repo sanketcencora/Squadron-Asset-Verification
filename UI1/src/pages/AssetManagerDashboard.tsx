@@ -400,7 +400,7 @@ ST-MB-2025-100,Mobile,iPhone 15 Pro,1199,2025-02-02,a123457,Jane Smith,Mumbai,Sa
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-40 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-8">
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2 gap-2">
             <h1 className="text-sm text-gray-800">Total Inventory</h1>
