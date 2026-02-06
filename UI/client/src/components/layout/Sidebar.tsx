@@ -127,13 +127,13 @@ export function Sidebar({ className }: SidebarProps) {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition-all duration-200",
                     isActive 
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary/20" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground hover:shadow-md"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-5 w-5" />
                   {link.label}
                 </Link>
               );

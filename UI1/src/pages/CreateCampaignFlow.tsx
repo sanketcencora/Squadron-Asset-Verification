@@ -103,7 +103,7 @@ export function CreateCampaignFlow({ onClose, onComplete }: CreateCampaignFlowPr
         {/* Header */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Create Verification Campaign</h2>
+            <h2 className="text-2xl font-bold text-gray-900" style={{ color: '#461e96' }}>Create Verification Campaign</h2>
             <p className="text-gray-600 mt-1">Step {step} of 3</p>
           </div>
           <button

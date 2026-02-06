@@ -174,7 +174,7 @@ export function VerificationReviewPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Verification Review</h1>
+            <h1 className="text-2xl font-bold text-[#461e96]">Verification Review</h1>
             <p className="text-gray-600 mt-1">Review and approve employee asset verifications</p>
           </div>
           <div className="flex items-center space-x-3">
@@ -202,7 +202,7 @@ export function VerificationReviewPage() {
       {loading && (
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex items-center space-x-3">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            <Loader2 className="w-6 h-6 animate-spin text-[#461e96]" />
             <span className="text-gray-600">Loading verification records...</span>
           </div>
         </div>
@@ -227,7 +227,7 @@ export function VerificationReviewPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600">Total Submissions</p>
-              <Package className="w-5 h-5 text-blue-600" />
+              <Package className="w-5 h-5 text-[#461e96]" />
             </div>
             <p className="text-3xl font-semibold text-gray-900">{stats.total || 0}</p>
           </div>
@@ -253,7 +253,7 @@ export function VerificationReviewPage() {
         {/* List View */}
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="p-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-900 mb-4">Verification Records</h2>
+            <h2 className="font-semibold text-[#461e96] mb-4">Verification Records</h2>
             
             {/* Search and Filters */}
             <div className="space-y-3">
@@ -299,7 +299,7 @@ export function VerificationReviewPage() {
                     key={record.id}
                     onClick={() => setSelectedRecord(record)}
                     className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-                      selectedRecord?.id === record.id ? 'bg-blue-50' : ''
+                      selectedRecord?.id === record.id ? 'bg-purple-50' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -531,7 +531,7 @@ export function VerificationReviewPage() {
                       </button>
                       <button
                         onClick={() => handleReassign(selectedRecord.id)}
-                        className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg font-medium hover:bg-blue-50 flex items-center justify-center space-x-2"
+                        className="px-4 py-2 border border-purple-300 text-[#461e96] rounded-lg font-medium hover:bg-purple-50 flex items-center justify-center space-x-2"
                       >
                         <RefreshCw className="w-4 h-4" />
                         <span>Reassign Asset</span>

@@ -395,10 +395,10 @@ function ReportsPage() {
   
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Audit Reports</h1>
+      <h1 className="text-2xl font-bold text-[#461e96] mb-4">Audit Reports</h1>
       <p className="text-gray-600">Generate and export compliance reports</p>
       {loading && (
-        <div className="mt-4 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg">
+        <div className="mt-4 px-4 py-2 bg-purple-50 text-[#461e96] rounded-lg">
           Generating report...
         </div>
       )}
@@ -406,7 +406,7 @@ function ReportsPage() {
         <button 
           onClick={handleAssetReconciliation}
           disabled={loading}
-          className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-6 border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <h3 className="font-semibold text-gray-900 mb-2">Asset Reconciliation Report</h3>
           <p className="text-sm text-gray-600">Compare SAP GL data with verified assets</p>
@@ -414,7 +414,7 @@ function ReportsPage() {
         <button 
           onClick={handleVerificationStatus}
           disabled={loading}
-          className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-6 border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <h3 className="font-semibold text-gray-900 mb-2">Verification Status Report</h3>
           <p className="text-sm text-gray-600">Campaign completion and compliance rates</p>
@@ -422,7 +422,7 @@ function ReportsPage() {
         <button 
           onClick={handleExceptionSummary}
           disabled={loading}
-          className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-6 border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <h3 className="font-semibold text-gray-900 mb-2">Exception Summary Report</h3>
           <p className="text-sm text-gray-600">All mismatches and missing devices</p>
@@ -483,7 +483,7 @@ function EquipmentReportsPage() {
         <p className="text-gray-500">Power BI reports are integrated in the main dashboard view.</p>
         <button
           onClick={() => navigate('/dashboard')}
-          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="mt-4 px-6 py-2 bg-gradient-to-r from-[#461e96] to-purple-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-700 transition-all"
         >
           Go to Dashboard
         </button>

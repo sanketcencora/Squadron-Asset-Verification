@@ -57,7 +57,7 @@ interface KPICardProps {
 
 function KPICard({ title, value, icon: Icon, color, trend }: KPICardProps) {
   const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600',
+    blue: 'bg-purple-50 text-[#461e96]',
     green: 'bg-green-50 text-green-600',
     yellow: 'bg-yellow-50 text-yellow-600',
     red: 'bg-red-50 text-red-600',
@@ -348,7 +348,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Finance Dashboard</h1>
+            <h1 className="text-2xl font-bold text-gray-900" style={{ color: '#461e96' }}>Finance Dashboard</h1>
             <p className="text-gray-600 mt-1">Monitor verification campaigns and audit compliance</p>
           </div>
           <div className="flex items-center space-x-3">
@@ -364,7 +364,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
             </label>
             <button
               onClick={onCreateCampaign}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center space-x-2"
+              className="px-4 py-2 bg-gradient-to-r from-[#461e96] to-purple-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-purple-700 flex items-center space-x-2 shadow-lg hover:shadow-xl transition-all"
             >
               <Plus className="w-4 h-4" />
               <span>Create Verification Campaign</span>
@@ -413,7 +413,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Comprehensive Asset Overview</h2>
+              <h2 className="text-lg font-semibold text-gray-900" style={{ color: '#461e96' }}>Comprehensive Asset Overview</h2>
               <p className="text-sm text-gray-600 mt-1">All asset categories including hardware, network, servers, audio video, and furniture</p>
             </div>
             <div className="flex items-center space-x-2">
@@ -556,7 +556,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
             {/* Header with Export */}
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Audit Analytics Dashboard</h3>
+                <h3 className="text-lg font-semibold text-gray-900" style={{ color: '#461e96' }}>Audit Analytics Dashboard</h3>
                 <p className="text-sm text-gray-600 mt-1">Real-time visualization of all asset categories for monthly and annual audits</p>
               </div>
               <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
@@ -759,7 +759,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
       <div className="bg-white rounded-lg border border-gray-200 mb-8">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Active Campaigns</h2>
+            <h2 className="text-lg font-semibold text-gray-900" style={{ color: '#461e96' }}>Active Campaigns</h2>
             <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
               View All
             </button>
@@ -799,7 +799,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
               </div>
 
               {/* Campaign Stats */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-4 gap-4 flex-wrap justify-space-between">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <p className="text-2xl font-semibold text-gray-900">{campaign.totalEmployees}</p>
                   <p className="text-xs text-gray-600 mt-1">Employees</p>
@@ -811,9 +811,6 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
                 <div className="text-center p-3 bg-yellow-50 rounded-lg">
                   <p className="text-2xl font-semibold text-yellow-700">{campaign.pendingCount}</p>
                   <p className="text-xs text-yellow-700 mt-1">Pending</p>
-                </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <p className="text-xs text-red-700 mt-1">Issues</p>
                 </div>
               </div>
 
@@ -835,7 +832,7 @@ export function FinanceDashboard({ onCreateCampaign, onViewReports }: FinanceDas
       <div className="bg-white rounded-lg border border-gray-200">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Verification Status by Team</h2>
+            <h2 className="text-lg font-semibold text-gray-900" style={{ color: '#461e96' }}>Verification Status by Team</h2>
             <div className="flex items-center space-x-3">
               <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
                 <Filter className="w-4 h-4" />

@@ -27,7 +27,7 @@ export default function VerificationReview() {
           
           <div className="flex justify-between items-end">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Verification Review</h1>
+              <h1 className="text-3xl font-bold" style={{ color: '#461e96' }}>Verification Review</h1>
               <p className="text-muted-foreground mt-1">Audit employee submissions and handle exceptions.</p>
             </div>
           </div>
@@ -40,7 +40,7 @@ export default function VerificationReview() {
                     <CheckCircle className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-blue-900">Verified</p>
+                    <p className="text-sm font-medium text-blue-900" style={{ color: '#461e96' }}>Verified</p>
                     <p className="text-2xl font-bold text-blue-700">1,240</p>
                   </div>
                 </div>
@@ -53,7 +53,7 @@ export default function VerificationReview() {
                     <Clock className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-amber-900">Pending Review</p>
+                    <p className="text-sm font-medium text-amber-900" style={{ color: '#461e96' }}>Pending Review</p>
                     <p className="text-2xl font-bold text-amber-700">45</p>
                   </div>
                 </div>
@@ -66,7 +66,7 @@ export default function VerificationReview() {
                     <AlertTriangle className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-red-900">Exceptions</p>
+                    <p className="text-sm font-medium text-red-900" style={{ color: '#461e96' }}>Exceptions</p>
                     <p className="text-2xl font-bold text-red-700">12</p>
                   </div>
                 </div>

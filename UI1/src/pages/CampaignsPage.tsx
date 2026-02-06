@@ -208,7 +208,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
     switch (status) {
       case 'Active': return 'bg-green-100 text-green-800';
       case 'Draft': return 'bg-gray-100 text-gray-800';
-      case 'Completed': return 'bg-blue-100 text-blue-800';
+      case 'Completed': return 'bg-purple-100 text-[#461e96]';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -216,7 +216,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#461e96]"></div>
       </div>
     );
   }
@@ -245,7 +245,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Campaign Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900" style={{ color: '#461e96' }}>Campaign Management</h1>
           <p className="text-gray-600 mt-1">View and manage all verification campaigns</p>
         </div>
         <div className="flex items-center space-x-3">
@@ -258,7 +258,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
           </button>
           <button
             onClick={onCreateCampaign}
-            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#461e96] to-purple-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
           >
             <Plus className="w-5 h-5" />
             <span>Create New Campaign</span>
@@ -274,8 +274,8 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
               <p className="text-sm text-gray-600">Total Campaigns</p>
               <p className="text-2xl font-bold text-gray-900">{campaigns.length}</p>
             </div>
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-[#461e96]" />
             </div>
           </div>
         </div>
@@ -305,10 +305,10 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-blue-600">{campaigns.filter(c => getEffectiveStatus(c) === 'Completed').length}</p>
+              <p className="text-2xl font-bold text-[#461e96]">{campaigns.filter(c => getEffectiveStatus(c) === 'Completed').length}</p>
             </div>
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Package className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Package className="w-5 h-5 text-[#461e96]" />
             </div>
           </div>
         </div>
@@ -360,7 +360,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
           </p>
           <button
             onClick={onCreateCampaign}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+            className="px-6 py-2 bg-gradient-to-r from-[#461e96] to-purple-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-700 transition-all shadow-lg"
           >
             Create Campaign
           </button>
@@ -372,7 +372,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
             const deadlineInfo = getDeadlineInfo(campaign.deadline);
             
             return (
-            <div key={campaign.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:border-blue-300 transition-colors">
+            <div key={campaign.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:border-purple-300 hover:shadow-lg transition-all">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
@@ -409,7 +409,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
                 <div className="flex items-center space-x-3">
                   <button 
                     onClick={() => setSelectedCampaign(campaign)}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-sm text-[#461e96] hover:text-purple-700 font-medium"
                   >
                     View Details →
                   </button>
@@ -570,7 +570,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
 
               {/* Filters Applied */}
               {selectedCampaign.filtersJson && (
-                <div className="bg-blue-50 rounded-lg p-4">
+                <div className="bg-purple-50 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-2 flex items-center space-x-2">
                     <Filter className="w-4 h-4" />
                     <span>Campaign Filters</span>
@@ -641,7 +641,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
               </div>
               <button
                 onClick={() => setSelectedCampaign(null)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+                className="px-6 py-2 bg-gradient-to-r from-[#461e96] to-purple-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-700 transition-all"
               >
                 Close
               </button>
@@ -677,7 +677,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
                         href={link.verificationUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:text-blue-800 underline break-all"
+                        className="text-xs text-[#461e96] hover:text-purple-800 underline break-all"
                       >
                         Open Verification Form →
                       </a>
@@ -690,7 +690,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
             <div className="mt-6 text-center">
               <button
                 onClick={() => setLaunchResult(null)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+                className="px-6 py-2 bg-gradient-to-r from-[#461e96] to-purple-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-700 transition-all"
               >
                 Got it
               </button>
@@ -703,8 +703,8 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
       {reminderResult && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="w-10 h-10 text-blue-600" />
+            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-10 h-10 text-[#461e96]" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Reminders Sent!</h3>
             <p className="text-gray-600 mb-4">
@@ -721,7 +721,7 @@ export function CampaignsPage({ onCreateCampaign }: CampaignsPageProps) {
             </p>
             <button
               onClick={() => setReminderResult(null)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+              className="px-6 py-2 bg-gradient-to-r from-[#461e96] to-purple-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-700 transition-all"
             >
               Got it
             </button>

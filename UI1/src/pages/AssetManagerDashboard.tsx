@@ -377,7 +377,7 @@ ST-MB-2025-100,Mobile,iPhone 15 Pro,1199,2025-02-02,a123457,Jane Smith,Mumbai,Sa
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Asset Management</h1>
+            <h1 className="text-2xl font-bold" style={{color: '#461e96'}}>Asset Management</h1>
             <p className="text-gray-600 mt-1">Manage hardware inventory, assignments, and verification status</p>
           </div>
           <div className="flex items-center space-x-3">
@@ -400,26 +400,26 @@ ST-MB-2025-100,Mobile,iPhone 15 Pro,1199,2025-02-02,a123457,Jane Smith,Mumbai,Sa
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-40 mb-8">
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Total Inventory</p>
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <h1 className="text-sm text-gray-800">Total Inventory</h1>
             <Package className="w-5 h-5 text-blue-600" />
           </div>
           <p className="text-3xl font-semibold text-gray-900">{displayAssets.length}</p>
           <p className="text-sm text-gray-600 mt-1">Hardware assets</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Instock</p>
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <h1 className="text-sm text-gray-800">Instock</h1>
             <Package className="w-5 h-5 text-purple-600" />
           </div>
           <p className="text-3xl font-semibold text-gray-900">{instockAssets.length}</p>
           <p className="text-sm text-gray-600 mt-1">Available for assignment</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Assigned</p>
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <h1 className="text-sm text-gray-800">Assigned</h1>
             <CheckCircle className="w-5 h-5 text-green-600" />
           </div>
           <p className="text-3xl font-semibold text-gray-900">{assignedAssets.length}</p>
@@ -427,7 +427,7 @@ ST-MB-2025-100,Mobile,iPhone 15 Pro,1199,2025-02-02,a123457,Jane Smith,Mumbai,Sa
         </div>
         {/* <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Exceptions</p>
+            <h1 className="text-sm text-gray-800">Exceptions</h1>
             <AlertCircle className="w-5 h-5 text-red-600" />
           </div>
           <p className="text-3xl font-semibold text-gray-900">{exceptionAssets.length}</p>

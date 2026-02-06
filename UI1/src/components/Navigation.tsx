@@ -45,8 +45,8 @@ export function Navigation({ role, currentPage, onNavigate, onLogout, userName }
         <div className="flex items-center justify-between h-full px-6">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-3">
-              <Logo className="h-7 w-auto" />
-              <span className="font-semibold text-gray-900">Asset Verification System</span>
+              <Logo className="h-9 w-auto" />
+              <span className="font-semibold text-[#461e96]">Asset Verification System</span>
             </div>
             
             {/* Global Search */}
