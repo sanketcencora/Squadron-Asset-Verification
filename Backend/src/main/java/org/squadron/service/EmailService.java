@@ -42,9 +42,10 @@ public class EmailService {
     
     /**
      * Send verification email to an employee with their assigned assets
+     * This method creates the token AND sends the email in a single transaction
      */
     @Transactional
-    public VerificationToken sendVerificationEmail(String employeeId, String employeeName, 
+    public VerificationToken createTokenAndSendEmail(String employeeId, String employeeName, 
                                                     String employeeEmail, Campaign campaign) {
         // Get employee's assigned assets
         List<HardwareAsset> assets = assetRepository.findByAssignedTo(employeeId);
@@ -91,13 +92,17 @@ public class EmailService {
         String textContent = buildVerificationEmailText(employeeName, campaign, assets, verificationUrl);
         
         try {
+            System.out.println("[EmailService] Attempting to send email to: " + employeeEmail);
+            long startTime = System.currentTimeMillis();
             mailer.send(
                 Mail.withHtml(employeeEmail, subject, htmlContent)
                     .setText(textContent)
             );
-            System.out.println("[EmailService] Verification email sent to: " + employeeEmail);
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("[EmailService] ✓ Email sent to: " + employeeEmail + " (took " + duration + "ms)");
         } catch (Exception e) {
-            System.err.println("[EmailService] Failed to send email to " + employeeEmail + ": " + e.getMessage());
+            System.err.println("[EmailService] ✗ Failed to send email to " + employeeEmail + ": " + e.getMessage());
+            System.err.println("[EmailService] Verification link (use manually): " + verificationUrl);
             // Still return the token so verification can proceed via direct link
         }
         
@@ -105,9 +110,18 @@ public class EmailService {
     }
     
     /**
-     * Send bulk verification emails for a campaign
+     * Backwards compatible method name
      */
     @Transactional
+    public VerificationToken sendVerificationEmail(String employeeId, String employeeName, 
+                                                    String employeeEmail, Campaign campaign) {
+        return createTokenAndSendEmail(employeeId, employeeName, employeeEmail, campaign);
+    }
+    
+    /**
+     * Send bulk verification emails for a campaign
+     * Process each employee in its own transaction to avoid timeout
+     */
     public List<VerificationToken> sendCampaignEmails(Campaign campaign, List<User> employees) {
         List<VerificationToken> tokens = new ArrayList<>();
         
@@ -115,18 +129,23 @@ public class EmailService {
         System.out.println("[EmailService] Processing " + employees.size() + " employees");
         
         for (User employee : employees) {
-            System.out.println("[EmailService] Processing employee: " + employee.name + " (" + employee.employeeId + ")");
-            VerificationToken token = sendVerificationEmail(
-                employee.employeeId, 
-                employee.name, 
-                employee.email, 
-                campaign
-            );
-            if (token != null) {
-                System.out.println("[EmailService] Created token for " + employee.name + " with campaignId: " + token.campaignId);
-                tokens.add(token);
-            } else {
-                System.out.println("[EmailService] No token created for " + employee.name + " (no assets?)");
+            try {
+                System.out.println("[EmailService] Processing employee: " + employee.name + " (" + employee.employeeId + ")");
+                VerificationToken token = createTokenAndSendEmail(
+                    employee.employeeId, 
+                    employee.name, 
+                    employee.email, 
+                    campaign
+                );
+                if (token != null) {
+                    System.out.println("[EmailService] Created token for " + employee.name + " with campaignId: " + token.campaignId);
+                    tokens.add(token);
+                } else {
+                    System.out.println("[EmailService] No token created for " + employee.name + " (no assets?)");
+                }
+            } catch (Exception e) {
+                System.err.println("[EmailService] Error processing employee " + employee.name + ": " + e.getMessage());
+                // Continue with next employee
             }
         }
         

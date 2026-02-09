@@ -129,7 +129,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       <div className="w-full max-w-5xl">
         {/* Header with Logo */}
         <div className="text-center mb-12">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-3">
             <div className="inline-flex items-center justify-center w-50 h-12">
               <img 
                 src="/cencoraLogo.png" 
@@ -147,7 +147,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-3 leading-tight">
             {/* Asset<br /> */}
-            <span className="text-[#461e96]">Asset Verification System</span>
+            {/* <span className="text-[#461e96]">Asset Verification System</span> */}
+            <img src="../public/image1.png" style={{width: "20%", display: "inline"}} alt="Cencora Logo" />
           </h1>
           <div className="flex items-center justify-center space-x-2 text-gray-600 mb-2">
             <span>Enterprise IT Asset Management for Audit Compliance</span>

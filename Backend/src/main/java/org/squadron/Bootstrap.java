@@ -131,6 +131,38 @@ public class Bootstrap {
             userService.registerFull("anmol.shukla", "password", "employee", "Anmol Shukla",
                 "anmol.shukla@cencora.com", "555-0105", "Cloud Provisioning", "MKT005");
         }
+        if (userService.findByUsername("udai.mopuru").isEmpty()) {
+            userService.registerFull("udai.mopuru", "password", "employee", "Udai Mopuru",
+                "udai.kumarmopuru@cencora.com", "555-0105", "CBS PMO", "a155753");
+        }
+        if (userService.findByUsername("nikhil.wadgaonkar").isEmpty()) {
+            userService.registerFull("nikhil.wadgaonkar", "password", "employee", "Nikhil Wadgaonkar",
+                "nikhil.wadgaonkar@cencora.com", "555-0105", "CBS PMO", "a134991");
+        }
+        if (userService.findByUsername("nikhil.wadgaonkar").isEmpty()) {
+            userService.registerFull("nikhil.wadgaonkar", "password", "employee", "Nikhil Wadgaonkar",
+                "nikhil.wadgaonkar@cencora.com", "555-0105", "CBS PMO", "a134991");
+        }
+
+        if (userService.findByUsername("aparna.rao").isEmpty()) {
+            userService.registerFull("aparna.rao", "password", "employee", "Aparna Rao",
+                "aparnashankar.rao@cencora.com", "555-0105", "CBS PMO", "a146385");
+        }
+
+        if (userService.findByUsername("gorakshanath.godage").isEmpty()) {
+            userService.registerFull("gorakshanath.godage", "password", "employee", "Gorakshanath Godage",
+                "gorkshanathdevidas.godage@cencora.com", "555-0105", "eCommerce & Portal", "a146387");
+        }
+
+        if (userService.findByUsername("priyam.dubey").isEmpty()) {
+            userService.registerFull("priyam.dubey", "password", "employee", "Priyam Dubey",
+                "priyamvadvibhas.dubey@cencora.com", "555-0105", "eCommerce & Portal", "a146388");
+        }
+
+        if (userService.findByUsername("atul.anand").isEmpty()) {
+            userService.registerFull("atul.anand", "password", "employee", "Atul Anand",
+                "atul.anand@cencora.com", "555-0105", "eCommerce & Portal", "a146390");
+        }
         // if (userService.findByUsername("anmol.shukla").isEmpty()) {
         //     userService.registerFull("anmol.shukla", "password", "employee", "Anmol Shukla",
         //         "anmol.shukla@cencora.com", "555-0105", "Cloud Provisioning", "MKT005");
@@ -210,7 +242,7 @@ public class Bootstrap {
             assetService.create(hw3);
 
             HardwareAsset hw4 = new HardwareAsset();
-            hw4.serviceTag = "ST-LT-2024-002";
+            hw4.serviceTag = "ST-LT-2024-015";
             hw4.assetType = AssetType.Laptop;
             hw4.model = "Dell Pro 14 Plus";
             hw4.invoiceNumber = "INV-2024-002";
@@ -226,6 +258,24 @@ public class Bootstrap {
             hw4.location = "Pune";
             hw4.team = "eCommerce & Portal";
             assetService.create(hw4);
+
+            HardwareAsset hw41 = new HardwareAsset();
+            hw41.serviceTag = "ST-LT-2024-002";
+            hw41.assetType = AssetType.Laptop;
+            hw41.model = "Dell Pro 14 Plus";
+            hw41.invoiceNumber = "INV-2024-002";
+            hw41.poNumber = "PO-98765";
+            hw41.cost = new BigDecimal("1200");
+            hw41.purchaseDate = LocalDate.of(2024, 9, 27);
+            hw41.assignedTo = "a146390";
+            hw41.assignedToName = "Dr.Atul Anand";
+            hw41.status = AssetStatus.Assigned;
+            hw41.verificationStatus = HardwareAsset.VerificationStatus.Pending;
+            hw41.lastVerifiedDate = LocalDate.of(2025, 1, 10);
+            hw41.isHighValue = true;
+            hw41.location = "Pune";
+            hw41.team = "eCommerce & Portal";
+            assetService.create(hw41);
 
              HardwareAsset hw5 = new HardwareAsset();
             hw5.serviceTag = "ST-LT-2024-003";
@@ -388,6 +438,97 @@ public class Bootstrap {
             hw13.location = "Pune";
             hw13.team = "Replenish IT";
             assetService.create(hw13);
+
+          
+            HardwareAsset hw21 = new HardwareAsset();
+            hw21.serviceTag = "ST-LT-2023-015";
+            hw21.assetType = AssetType.Laptop;
+            hw21.model = "Dell Pro 14 Plus";
+            hw21.invoiceNumber = "INV-2023-015";
+            hw21.poNumber = "PO-98765";
+            hw21.cost = new BigDecimal("1200");
+            hw21.purchaseDate = LocalDate.of(2023, 11, 21);
+            hw21.assignedTo = "A155753";
+            hw21.assignedToName = "Udai Kumar Mopuru";
+            hw21.status = AssetStatus.Assigned;
+            hw21.verificationStatus = HardwareAsset.VerificationStatus.Pending;
+            hw21.lastVerifiedDate = LocalDate.of(2025, 1, 10);
+            hw21.isHighValue = true;
+            hw21.location = "Pune";
+            hw21.team = "CBS PMO";
+            assetService.create(hw21);
+
+            HardwareAsset hw22 = new HardwareAsset();
+            hw22.serviceTag = "ST-LT-2023-022";
+            hw22.assetType = AssetType.Laptop;
+            hw22.model = "Dell Latitude 5540";
+            hw22.invoiceNumber = "INV-2023-022";
+            hw22.poNumber = "PO-98765";
+            hw22.cost = new BigDecimal("1200");
+            hw22.purchaseDate = LocalDate.of(2023, 11, 21);
+            hw22.assignedTo = "A134991";
+            hw22.assignedToName = "Nikhil Wadgaonkar";
+            hw22.status = AssetStatus.Assigned;
+            hw22.verificationStatus = HardwareAsset.VerificationStatus.Pending;
+            hw22.lastVerifiedDate = LocalDate.of(2025, 1, 10);
+            hw22.isHighValue = true;
+            hw22.location = "Pune";
+            hw22.team = "CBS PMO";
+            assetService.create(hw22);
+
+            HardwareAsset hw23 = new HardwareAsset();
+            hw23.serviceTag = "ST-LT-2023-023";
+            hw23.assetType = AssetType.Laptop;
+            hw23.model = "Dell Latitude 5540";
+            hw23.invoiceNumber = "INV-2023-023";
+            hw23.poNumber = "PO-98765";
+            hw23.cost = new BigDecimal("1200");
+            hw23.purchaseDate = LocalDate.of(2023, 11, 21);
+            hw23.assignedTo = "A146385";
+            hw23.assignedToName = "Aparna Rao";
+            hw23.status = AssetStatus.Assigned;
+            hw23.verificationStatus = HardwareAsset.VerificationStatus.Pending;
+            hw23.lastVerifiedDate = LocalDate.of(2025, 1, 10);
+            hw23.isHighValue = true;
+            hw23.location = "Pune";
+            hw23.team = "CBS PMO";
+            assetService.create(hw23);  
+            
+            HardwareAsset hw24 = new HardwareAsset();
+            hw24.serviceTag = "ST-LT-2023-024";
+            hw24.assetType = AssetType.Laptop;
+            hw24.model = "Dell Pro 5540";
+            hw24.invoiceNumber = "INV-2023-024";
+            hw24.poNumber = "PO-98765";
+            hw24.cost = new BigDecimal("1200");
+            hw24.purchaseDate = LocalDate.of(2023, 11, 21);
+            hw24.assignedTo = "A146387";
+            hw24.assignedToName = "Gorkshanath Godage";
+            hw24.status = AssetStatus.Assigned;
+            hw24.verificationStatus = HardwareAsset.VerificationStatus.Pending;
+            hw24.lastVerifiedDate = LocalDate.of(2025, 1, 10);
+            hw24.isHighValue = true;
+            hw24.location = "Pune";
+            hw24.team = "eCommerce & Portal";
+            assetService.create(hw24); 
+
+            HardwareAsset hw25 = new HardwareAsset();
+            hw25.serviceTag = "ST-LT-2023-025";
+            hw25.assetType = AssetType.Laptop;
+            hw25.model = "Dell Pro 5540";
+            hw25.invoiceNumber = "INV-2023-025";
+            hw25.poNumber = "PO-98765";
+            hw25.cost = new BigDecimal("1200");
+            hw25.purchaseDate = LocalDate.of(2023, 11, 21);
+            hw25.assignedTo = "A146388";
+            hw25.assignedToName = "Priyam Dubey";
+            hw25.status = AssetStatus.Assigned;
+            hw25.verificationStatus = HardwareAsset.VerificationStatus.Pending;
+            hw25.lastVerifiedDate = LocalDate.of(2025, 1, 10);
+            hw25.isHighValue = true;
+            hw25.location = "Pune";
+            hw25.team = "eCommerce & Portal";
+            assetService.create(hw25); 
 
             // Instock Hardware - Available for assignment
             HardwareAsset hw14 = new HardwareAsset();

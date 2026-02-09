@@ -154,10 +154,11 @@ public class CampaignResource {
     
     /**
      * Launch campaign and send verification emails to all employees
+     * Note: We don't use @Transactional here because email sending can take time
+     * and each token creation has its own transaction in EmailService
      */
     @POST
     @Path("/{id}/launch-with-emails")
-    @jakarta.transaction.Transactional
     public Response launchWithEmails(@PathParam("id") Long id) {
         Campaign campaign = service.findById(id);
         if (campaign == null) {
@@ -197,10 +198,10 @@ public class CampaignResource {
                 .build();
         }
         
-        // Launch the campaign
+        // Launch the campaign (this has its own transaction in the service)
         Campaign updated = service.launch(id);
         
-        // Send emails to all employees
+        // Send emails to all employees (each email has its own transaction)
         List<VerificationToken> tokens = emailService.sendCampaignEmails(campaign, employees);
         System.out.println("[CampaignResource] Created " + tokens.size() + " verification tokens");
         

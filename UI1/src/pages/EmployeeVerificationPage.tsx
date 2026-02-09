@@ -276,10 +276,12 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
       <div className="bg-white border-b border-gray-200 py-4 px-6">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Logo className="h-8 w-auto" />
+            {/* <Logo className="h-8 w-auto" /> */}
+                                      <img src="../public/image1.png" style={{width: "35%", display: "block", padding: "1rem"}} alt="Cencora Logo" />
+
             <div>
-              <h1 className="font-semibold text-gray-900">Asset Verification System</h1>
-              <p className="text-sm text-gray-600">{verificationData.campaignName}</p>
+              <h1 className="font-semibold text-gray-900">{verificationData.campaignName}</h1>
+              {/* <p className="text-sm text-gray-600">{verificationData.campaignName}</p> */}
             </div>
           </div>
           <div className="text-right">
@@ -455,15 +457,47 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
         </div>
 
         {/* Section B: Assigned Peripherals */}
-        {verificationData.allPeripherals.length > 0 && (
+        {verificationData.allPeripherals.length > 0 && (() => {
+          // Group peripherals by type and count them
+          const peripheralCounts: { [type: string]: number } = {};
+          verificationData.allPeripherals.forEach(p => {
+            // Extract peripheral type (e.g., "Mouse", "Keyboard") from the name
+            // Handles formats like "Mouse", "Mouse - SN123", "USB-C Cable", etc.
+            const type = p.split(' - ')[0].split(' (')[0].trim();
+            peripheralCounts[type] = (peripheralCounts[type] || 0) + 1;
+          });
+          const countSummary = Object.entries(peripheralCounts)
+            .map(([type, count]) => `${type} - ${count}`)
+            .join(', ');
+          
+          return (
           <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Assigned Peripherals</h3>
+                  <p className="text-sm text-gray-600">Confirm each peripheral currently in your possession</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Assigned Peripherals</h3>
-                <p className="text-sm text-gray-600">Confirm each peripheral currently in your possession</p>
+              <div className="text-right">
+                <span className="text-2xl font-bold text-[#461e96]">{verificationData.allPeripherals.length}</span>
+                <span className="text-sm text-gray-500 ml-1">total</span>
+              </div>
+            </div>
+            
+            {/* Peripheral count summary by type */}
+            <div className="mb-6 p-3 bg-[#f2effa] rounded-lg border border-[#e3dcf7]">
+              <div className="flex flex-wrap gap-3">
+                {Object.entries(peripheralCounts).map(([type, count]) => (
+                  <div key={type} className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full border border-[#d1c4e9]">
+                    <Package className="w-4 h-4 text-[#461e96]" />
+                    <span className="text-sm font-medium text-gray-700">{type}</span>
+                    <span className="text-sm font-bold text-[#461e96] bg-[#e3dcf7] px-2 py-0.5 rounded-full">{count}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -533,7 +567,8 @@ export function EmployeeVerificationPage({ onSubmit }: EmployeeVerificationPageP
               })}
             </div>
           </div>
-        )}
+        );
+        })()}
 
         {/* Section C: Declaration & Submit */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">

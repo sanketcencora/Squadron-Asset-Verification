@@ -166,35 +166,35 @@ Exce:l1 -> InStong
 AND
 Remove the "High-Value Assets Only" field.
  
-Q4 2024 Annual Audit
-Completed
-Deadline Passed
-Annual hardware and peripheral verification for audit compliance
 
-
-Assets Q1 2025
-Completed
-Deadline Passed
-Verification of assets valued over $1000
-
+Q1 2026 Annual Audit
+Annual hardware and peripheral verification for audit compliance.
 
 Field for 
 
 
 
+Qty, 
+
+===> 
+
+Landing Page: 
+
+
+Finance: 
+1) Dashboard Fin.
+2) Asset Manger: Assign
+3) Details
+4) Campaign 
+5) Empl. Veri
+6) Reports 
 
 
 
 
 
 
-
-
-
-
-
-
-
+Devops tr
 
 
 
