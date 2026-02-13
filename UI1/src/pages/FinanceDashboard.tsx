@@ -66,7 +66,7 @@ function KPICard({ title, value, icon: Icon, color, trend }: KPICardProps) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm text-gray-600">{title}</p>
+        <p className="text-m text-gray-800">{title}</p>
         <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
           <Icon className="w-5 h-5" />
         </div>

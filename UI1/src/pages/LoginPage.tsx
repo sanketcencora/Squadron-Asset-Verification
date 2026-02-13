@@ -151,7 +151,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <img src="../public/image1.png" style={{width: "20%", display: "inline"}} alt="Cencora Logo" />
           </h1>
           <div className="flex items-center justify-center space-x-2 text-gray-600 mb-2">
-            <span>Enterprise IT Asset Management for Audit Compliance</span>
+            <span>Enterprise Asset Management for Audit Compliance</span>
           </div>
           <div className="flex justify-center">
             <div className="bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100">

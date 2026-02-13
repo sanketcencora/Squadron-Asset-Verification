@@ -170,18 +170,25 @@ Remove the "High-Value Assets Only" field.
 Q1 2026 Annual Audit
 Annual hardware and peripheral verification for audit compliance.
 
-Field for 
+
+npm run dev 
+
+mvnw quarkus:dev
 
 
+1.Finical perosons ==> Audit purpose
+2.Asset Manager ==> Assignment It Assets, keep tracking about asseets
+3.Employess ==> Who will verify they have these assets with them  
 
-Qty, 
-
-===> 
+Tools and Technologies: 
+ - These is the same tech stack Cencora usage, for their Ecomm portals, which scalable
+and reliable. 
+- From intial development we focused as End product
 
 Landing Page: 
 
 
-Finance: 
+Finance:
 1) Dashboard Fin.
 2) Asset Manger: Assign
 3) Details
